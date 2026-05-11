@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Cassandra.ApiService/Cassandra.ApiService.csproj" />
+  <Project Path="Cassandra.AppHost/Cassandra.AppHost.csproj" />
+  <Project Path="Cassandra.ServiceDefaults/Cassandra.ServiceDefaults.csproj" />
+  <Project Path="Cassandra.Tests/Cassandra.Tests.csproj" />
+  <Project Path="Cassandra.Web/Cassandra.Web.csproj" />
+</Solution>
