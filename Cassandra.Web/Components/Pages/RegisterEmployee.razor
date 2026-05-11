@@ -1,0 +1,156 @@
+@page "/register/employee"
+@layout Layout.EmptyLayout
+@inject RegistrationService RegistrationService
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Register Employee – Cassandra</PageTitle>
+
+<div class="reg-wrapper">
+    <div class="reg-card">
+
+        <div class="reg-header">
+            <div class="reg-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002-.014.002H7.022zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816zM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275zM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
+                </svg>
+            </div>
+            <h1 class="reg-title">Register Employee</h1>
+            <p class="reg-subtitle">Add a new employee to the system</p>
+        </div>
+
+        @if (_success)
+        {
+            <div class="alert-success" role="alert">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16">
+                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                </svg>
+                Employee registered successfully!
+                <button class="btn-link-inline" @onclick="Reset">Register another</button>
+            </div>
+        }
+        else
+        {
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert-error" role="alert">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+                    </svg>
+                    @_errorMessage
+                </div>
+            }
+
+            <EditForm Model="_model" OnValidSubmit="HandleSubmit" FormName="register-employee">
+                <DataAnnotationsValidator />
+
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">First Name <span class="required">*</span></label>
+                        <InputText class="form-control" @bind-Value="_model.FirstName"
+                                   placeholder="John" disabled="@_isLoading" />
+                        <ValidationMessage For="() => _model.FirstName" class="field-error" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Last Name <span class="required">*</span></label>
+                        <InputText class="form-control" @bind-Value="_model.LastName"
+                                   placeholder="Doe" disabled="@_isLoading" />
+                        <ValidationMessage For="() => _model.LastName" class="field-error" />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Email Address <span class="required">*</span></label>
+                    <InputText type="email" class="form-control" @bind-Value="_model.Email"
+                               placeholder="john.doe@company.com" disabled="@_isLoading" />
+                    <ValidationMessage For="() => _model.Email" class="field-error" />
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Phone Number <span class="optional">(optional)</span></label>
+                    <InputText type="tel" class="form-control" @bind-Value="_model.PhoneNumber"
+                               placeholder="+62 812 3456 7890" disabled="@_isLoading" />
+                </div>
+
+                <button type="submit" class="btn-submit w-100" disabled="@_isLoading">
+                    @if (_isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Registering…</span>
+                    }
+                    else
+                    {
+                        <span>Register Employee</span>
+                    }
+                </button>
+            </EditForm>
+        }
+
+        <p class="reg-footer">
+            <a href="/login">← Back to Login</a>
+            &nbsp;·&nbsp;
+            <a href="/register/user">Register User instead</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    private EmployeeFormModel _model = new();
+    private string? _errorMessage;
+    private bool _isLoading;
+    private bool _success;
+
+    private async Task HandleSubmit()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var (success, error) = await RegistrationService.RegisterEmployeeAsync(
+                new RegisterEmployeeRequest(
+                    _model.FirstName,
+                    _model.LastName,
+                    _model.Email,
+                    string.IsNullOrWhiteSpace(_model.PhoneNumber) ? null : _model.PhoneNumber));
+
+            if (success)
+                _success = true;
+            else
+                _errorMessage = error;
+        }
+        catch
+        {
+            _errorMessage = "An unexpected error occurred. Please try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void Reset()
+    {
+        _model = new();
+        _success = false;
+        _errorMessage = null;
+    }
+
+    private sealed class EmployeeFormModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "First name is required.")]
+        [System.ComponentModel.DataAnnotations.StringLength(50, ErrorMessage = "Max 50 characters.")]
+        public string FirstName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Last name is required.")]
+        [System.ComponentModel.DataAnnotations.StringLength(50, ErrorMessage = "Max 50 characters.")]
+        public string LastName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Email is required.")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Enter a valid email address.")]
+        public string Email { get; set; } = string.Empty;
+
+        public string? PhoneNumber { get; set; }
+    }
+}

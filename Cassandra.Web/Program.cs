@@ -1,5 +1,7 @@
 using Cassandra.Web;
 using Cassandra.Web.Components;
+using Cassandra.Web.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,10 +13,25 @@ builder.AddRedisOutputCache("cache");
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Auth
+builder.Services.AddScoped<LocalStorageService>();
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<JwtAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
+    sp.GetRequiredService<JwtAuthStateProvider>());
+
 builder.Services.AddHttpClient<WeatherApiClient>(client =>
     {
-        // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
-        // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
+        client.BaseAddress = new("https+http://apiservice");
+    });
+
+builder.Services.AddHttpClient<AuthService>(client =>
+    {
+        client.BaseAddress = new("https+http://apiservice");
+    });
+
+builder.Services.AddHttpClient<RegistrationService>(client =>
+    {
         client.BaseAddress = new("https+http://apiservice");
     });
 

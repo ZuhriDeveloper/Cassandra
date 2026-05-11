@@ -1,9 +1,17 @@
-var builder = DistributedApplication.CreateBuilder(args);
+﻿var builder = DistributedApplication.CreateBuilder(args);
 
 var cache = builder.AddRedis("cache");
 
+var postgres = builder.AddPostgres("postgres")
+    .WithDataVolume()
+    .WithHostPort(54049)
+    .WithEnvironment("POSTGRES_PASSWORD", "YYYjzk}ppk*CUP.65!X}!~!")
+    .AddDatabase("cassandradb");
+
 var apiService = builder.AddProject<Projects.Cassandra_ApiService>("apiservice")
-    .WithHttpHealthCheck("/health");
+    .WithHttpHealthCheck("/health")
+    .WithReference(postgres)
+    .WaitFor(postgres);
 
 builder.AddProject<Projects.Cassandra_Web>("webfrontend")
     .WithExternalHttpEndpoints()
