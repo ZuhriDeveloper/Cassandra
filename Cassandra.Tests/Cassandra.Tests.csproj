@@ -19,6 +19,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Cassandra.AppHost\Cassandra.AppHost.csproj" />
+    <ProjectReference Include="..\Cassandra.Backend\Cassandra.Domain\Cassandra.Domain.csproj" />
+    <ProjectReference Include="..\Cassandra.Backend\Cassandra.Application\Cassandra.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

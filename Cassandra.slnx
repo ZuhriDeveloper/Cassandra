@@ -1,7 +1,15 @@
 <Solution>
-  <Project Path="Cassandra.ApiService/Cassandra.ApiService.csproj" />
+  <Folder Name="/Cassandra.Backend/">
+    <Project Path="Cassandra.Backend/Cassandra.Application/Cassandra.Application.csproj" />
+    <Project Path="Cassandra.Backend/Cassandra.Domain/Cassandra.Domain.csproj" />
+    <Project Path="Cassandra.Backend/Cassandra.Infrastructure/Cassandra.Infrastructure.csproj" />
+    <Project Path="Cassandra.Backend/Cassandra.WebApi/Cassandra.WebApi.csproj" />
+  </Folder>
+  <Folder Name="/Cassandra.WebUi/">
+    <Project Path="Cassandra.WebUi/Cassandra.WebUi.Client/Cassandra.WebUi.Client.csproj" />
+    <Project Path="Cassandra.WebUi/Cassandra.WebUi/Cassandra.WebUi.csproj" />
+  </Folder>
   <Project Path="Cassandra.AppHost/Cassandra.AppHost.csproj" />
   <Project Path="Cassandra.ServiceDefaults/Cassandra.ServiceDefaults.csproj" />
   <Project Path="Cassandra.Tests/Cassandra.Tests.csproj" />
-  <Project Path="Cassandra.Web/Cassandra.Web.csproj" />
 </Solution>

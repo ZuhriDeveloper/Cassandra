@@ -1,0 +1,141 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@inject ThemeState ThemeState
+@inject IJSRuntime JS
+@implements IDisposable
+
+<MudThemeProvider Theme="@CassandraTheme.Default" IsDarkMode="@ThemeState.IsDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+
+    <MudAppBar Elevation="0" Dense="true"
+               Style="border-bottom:1px solid var(--mud-palette-divider);">
+
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       OnClick="ToggleDrawer" />
+
+        <MudText Typo="Typo.h6" Class="ml-1"
+                 Style="font-weight:700;letter-spacing:-.4px;user-select:none">
+            Cassandra
+        </MudText>
+
+        <MudSpacer />
+
+        <MudTooltip Text="@(ThemeState.IsDarkMode ? "Mode Terang" : "Mode Gelap")"
+                    Placement="Placement.Bottom">
+            <MudIconButton Icon="@(ThemeState.IsDarkMode
+                                     ? Icons.Material.Filled.LightMode
+                                     : Icons.Material.Filled.DarkMode)"
+                           Color="Color.Inherit"
+                           OnClick="ToggleDarkMode" />
+        </MudTooltip>
+
+        <AuthorizeView>
+            <Authorized>
+                <MudTooltip Text="@context.User.Identity?.Name" Placement="Placement.Bottom">
+                    <MudAvatar Color="Color.Primary" Size="Size.Small" Class="mr-1"
+                               Style="font-size:.75rem;cursor:default">
+                        @(context.User.Identity?.Name?[..1].ToUpperInvariant() ?? "?")
+                    </MudAvatar>
+                </MudTooltip>
+                <form method="post" action="/account/logout">
+                    <AntiforgeryToken />
+                    <MudTooltip Text="Keluar" Placement="Placement.Bottom">
+                        <MudIconButton Icon="@Icons.Material.Filled.Logout"
+                                       Color="Color.Inherit"
+                                       ButtonType="ButtonType.Submit"
+                                       Size="Size.Small" />
+                    </MudTooltip>
+                </form>
+            </Authorized>
+        </AuthorizeView>
+
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen"
+               Elevation="0"
+               Variant="DrawerVariant.Mini"
+               OpenMiniOnHover="true"
+               ClipMode="DrawerClipMode.Always"
+               Style="border-right:1px solid rgba(255,255,255,.06)">
+
+        <MudDrawerHeader Dense="true" Class="px-4"
+                         Style="min-height:48px;align-items:center;
+                                border-bottom:1px solid rgba(255,255,255,.06)">
+            @if (_drawerOpen)
+            {
+                <MudText Typo="Typo.subtitle2"
+                         Style="font-weight:700;color:var(--mud-palette-drawer-text);
+                                letter-spacing:-.2px;user-select:none">
+                    Cassandra
+                </MudText>
+            }
+        </MudDrawerHeader>
+
+        <CascadingValue Value="_drawerOpen" Name="DrawerOpen">
+            <NavMenu />
+        </CascadingValue>
+
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-5 pt-4">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+
+</MudLayout>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private bool _drawerOpen = true;
+
+    protected override void OnInitialized()
+        => ThemeState.OnChanged += OnThemeChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            var darkPref    = await JS.InvokeAsync<string?>("localStorage.getItem", "cassandra_dark");
+            var sidebarPref = await JS.InvokeAsync<string?>("localStorage.getItem", "cassandra_sidebar");
+
+            ThemeState.SetDarkMode(darkPref == "1");
+            _drawerOpen = sidebarPref != "1";
+        }
+        catch { /* localStorage not available (private/incognito edge cases) */ }
+
+        StateHasChanged();
+    }
+
+    private void OnThemeChanged()
+        => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+        => ThemeState.OnChanged -= OnThemeChanged;
+
+    private async Task ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+        try { await JS.InvokeVoidAsync("localStorage.setItem", "cassandra_sidebar", _drawerOpen ? "0" : "1"); }
+        catch { }
+    }
+
+    private async Task ToggleDarkMode()
+    {
+        ThemeState.Toggle();
+        try { await JS.InvokeVoidAsync("localStorage.setItem", "cassandra_dark", ThemeState.IsDarkMode ? "1" : "0"); }
+        catch { }
+    }
+}

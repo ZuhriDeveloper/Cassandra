@@ -1,0 +1,16 @@
+@page "/"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Beranda — Cassandra</PageTitle>
+
+<h4 class="fw-bold mb-1">Selamat datang di Cassandra</h4>
+<p class="text-muted">Sistem manajemen dealer penjualan sepeda motor.</p>
+
+<AuthorizeView>
+    <Authorized>
+        <p class="small text-muted mt-3">
+            Masuk sebagai <strong>@context.User.Identity?.Name</strong>.
+        </p>
+    </Authorized>
+</AuthorizeView>

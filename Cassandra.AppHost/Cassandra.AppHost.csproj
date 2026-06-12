@@ -9,13 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Cassandra.ApiService\Cassandra.ApiService.csproj" />
-    <ProjectReference Include="..\Cassandra.Web\Cassandra.Web.csproj" />
+    <ProjectReference Include="..\Cassandra.Backend\Cassandra.WebApi\Cassandra.WebApi.csproj" />
+    <ProjectReference Include="..\Cassandra.WebUi\Cassandra.WebUi\Cassandra.WebUi.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.3.0" />
-    <PackageReference Include="Aspire.Hosting.Redis" Version="13.3.0" />
   </ItemGroup>
 
 </Project>

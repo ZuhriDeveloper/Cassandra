@@ -1,0 +1,54 @@
+using Cassandra.Application;
+using Cassandra.Domain.Common;
+using Cassandra.Infrastructure;
+using Cassandra.Infrastructure.Persistence;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddControllers();
+builder.Services.AddOpenApi();
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins(builder.Configuration["WebUi:BaseUrl"] ?? "https://localhost:7266")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var initializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
+    await initializer.InitialiseAsync();
+}
+
+if (app.Environment.IsDevelopment())
+    app.MapOpenApi();
+
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Return domain rule violations as 400 Bad Request instead of 500
+app.Use(async (ctx, next) =>
+{
+    try { await next(ctx); }
+    catch (DomainException ex)
+    {
+        ctx.Response.StatusCode = 400;
+        await ctx.Response.WriteAsJsonAsync(new { errors = new[] { ex.Message } });
+    }
+});
+
+app.MapControllers();
+
+app.MapDefaultEndpoints();
+
+app.Run();
