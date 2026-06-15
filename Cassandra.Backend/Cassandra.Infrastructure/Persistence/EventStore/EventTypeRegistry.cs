@@ -2,6 +2,7 @@ using Cassandra.Domain.Common;
 using Cassandra.Domain.Dealers.Events;
 using Cassandra.Domain.Jabatan.Events;
 using Cassandra.Domain.Karyawan.Events;
+using Cassandra.Domain.Kios.Events;
 
 namespace Cassandra.Infrastructure.Persistence.EventStore;
 
@@ -28,6 +29,13 @@ public static class EventTypeRegistry
         [nameof(KaryawanDeactivated)] = typeof(KaryawanDeactivated),
         [nameof(KaryawanResigned)]    = typeof(KaryawanResigned),
         [nameof(KaryawanLimitSet)]    = typeof(KaryawanLimitSet),
+
+        // Kios (dealer-scoped) events
+        [nameof(KiosCreated)]         = typeof(KiosCreated),
+        [nameof(KiosUpdated)]         = typeof(KiosUpdated),
+        [nameof(KiosActivated)]       = typeof(KiosActivated),
+        [nameof(KiosDeactivated)]     = typeof(KiosDeactivated),
+        [nameof(KiosLimitSet)]        = typeof(KiosLimitSet),
     };
 
     public static Type Resolve(string eventType) =>

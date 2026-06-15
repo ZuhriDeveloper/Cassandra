@@ -10,9 +10,14 @@ using Cassandra.Application.Commands.Karyawan.RecordKaryawanResign;
 using Cassandra.Application.Commands.Karyawan.SetKaryawanLimit;
 using Cassandra.Application.Commands.Karyawan.SetKaryawanStatus;
 using Cassandra.Application.Commands.Karyawan.UpdateKaryawan;
+using Cassandra.Application.Commands.Kios.CreateKios;
+using Cassandra.Application.Commands.Kios.SetKiosLimit;
+using Cassandra.Application.Commands.Kios.SetKiosStatus;
+using Cassandra.Application.Commands.Kios.UpdateKios;
 using Cassandra.Application.Queries.Dealers;
 using Cassandra.Application.Queries.Jabatan;
 using Cassandra.Application.Queries.Karyawan;
+using Cassandra.Application.Queries.Kios;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -44,6 +49,13 @@ public static class DependencyInjection
         services.AddScoped<SetKaryawanLimitCommandHandler>();
         services.AddScoped<RecordKaryawanResignCommandHandler>();
         services.AddScoped<GetKaryawansQueryHandler>();
+
+        // Kios
+        services.AddScoped<CreateKiosCommandHandler>();
+        services.AddScoped<UpdateKiosCommandHandler>();
+        services.AddScoped<SetKiosStatusCommandHandler>();
+        services.AddScoped<SetKiosLimitCommandHandler>();
+        services.AddScoped<GetKiosQueryHandler>();
 
         // Validators (all assemblies scanned from this project)
         services.AddValidatorsFromAssemblyContaining<LoginCommandHandler>();

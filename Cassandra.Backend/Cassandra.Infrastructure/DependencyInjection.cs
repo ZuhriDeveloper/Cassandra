@@ -74,6 +74,10 @@ public static class DependencyInjection
         services.AddScoped<Application.Contracts.Karyawan.IKaryawanRepository, Karyawan.KaryawanRepository>();
         services.AddScoped<Application.Contracts.Karyawan.IKaryawanQueryRepository, Karyawan.KaryawanQueryRepository>();
 
+        // ── Kios ─────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Kios.IKiosRepository, Kios.KiosRepository>();
+        services.AddScoped<Application.Contracts.Kios.IKiosQueryRepository, Kios.KiosQueryRepository>();
+
         return services;
     }
 }
