@@ -138,6 +138,50 @@ public class MasterDataApiClient(HttpClient http)
         return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
     }
 
+    // ── Mediator ──────────────────────────────────────────────────────────────
+
+    public Task<List<MediatorDto>?> GetMediatorsAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<MediatorDto>>("api/dealer/mediator", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateMediatorAsync(
+        string  name,
+        Guid    karyawanId,
+        string  address,
+        decimal limit,
+        CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/mediator",
+            new { name, karyawanId, address, limit }, ct);
+
+        if (!response.IsSuccessStatusCode)
+            return (null, await ReadErrorsAsync(response));
+
+        var result = await response.Content
+            .ReadFromJsonAsync<CreateMediatorResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> UpdateMediatorAsync(
+        Guid    id,
+        string  name,
+        Guid    karyawanId,
+        string  address,
+        CancellationToken ct = default)
+    {
+        var response = await http.PutAsJsonAsync(
+            $"api/dealer/mediator/{id}",
+            new { name, karyawanId, address }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetMediatorStatusAsync(
+        Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync(
+            $"api/dealer/mediator/{id}/status", new { isActive }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static async Task<List<string>> ReadErrorsAsync(HttpResponseMessage r)
@@ -187,3 +231,12 @@ public record KiosDto(
     decimal Limit,
     bool    IsActive);
 public record CreateKiosResponse(Guid Id);
+
+public record MediatorDto(
+    Guid    Id,
+    string  Name,
+    Guid    KaryawanId,
+    string  Address,
+    decimal Limit,
+    bool    IsActive);
+public record CreateMediatorResponse(Guid Id);

@@ -78,6 +78,10 @@ public static class DependencyInjection
         services.AddScoped<Application.Contracts.Kios.IKiosRepository, Kios.KiosRepository>();
         services.AddScoped<Application.Contracts.Kios.IKiosQueryRepository, Kios.KiosQueryRepository>();
 
+        // ── Mediator ──────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Mediator.IMediatorRepository, Mediator.MediatorRepository>();
+        services.AddScoped<Application.Contracts.Mediator.IMediatorQueryRepository, Mediator.MediatorQueryRepository>();
+
         return services;
     }
 }

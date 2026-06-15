@@ -14,10 +14,15 @@ using Cassandra.Application.Commands.Kios.CreateKios;
 using Cassandra.Application.Commands.Kios.SetKiosLimit;
 using Cassandra.Application.Commands.Kios.SetKiosStatus;
 using Cassandra.Application.Commands.Kios.UpdateKios;
+using Cassandra.Application.Commands.Mediator.CreateMediator;
+using Cassandra.Application.Commands.Mediator.SetMediatorLimit;
+using Cassandra.Application.Commands.Mediator.SetMediatorStatus;
+using Cassandra.Application.Commands.Mediator.UpdateMediator;
 using Cassandra.Application.Queries.Dealers;
 using Cassandra.Application.Queries.Jabatan;
 using Cassandra.Application.Queries.Karyawan;
 using Cassandra.Application.Queries.Kios;
+using Cassandra.Application.Queries.Mediator;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -56,6 +61,13 @@ public static class DependencyInjection
         services.AddScoped<SetKiosStatusCommandHandler>();
         services.AddScoped<SetKiosLimitCommandHandler>();
         services.AddScoped<GetKiosQueryHandler>();
+
+        // Mediator
+        services.AddScoped<CreateMediatorCommandHandler>();
+        services.AddScoped<UpdateMediatorCommandHandler>();
+        services.AddScoped<SetMediatorStatusCommandHandler>();
+        services.AddScoped<SetMediatorLimitCommandHandler>();
+        services.AddScoped<GetMediatorsQueryHandler>();
 
         // Validators (all assemblies scanned from this project)
         services.AddValidatorsFromAssemblyContaining<LoginCommandHandler>();

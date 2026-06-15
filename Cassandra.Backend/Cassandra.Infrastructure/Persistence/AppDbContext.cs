@@ -17,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
     public DbSet<JabatanReadModel> JabatanReadModels => Set<JabatanReadModel>();
     public DbSet<KaryawanReadModel> KaryawanReadModels => Set<KaryawanReadModel>();
     public DbSet<KiosReadModel> KiosReadModels => Set<KiosReadModel>();
+    public DbSet<MediatorReadModel> MediatorReadModels => Set<MediatorReadModel>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -84,6 +85,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
             e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
             e.Property(x => x.UpdatedBy).HasMaxLength(100);
             e.HasIndex(x => new { x.DealerId, x.Code }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<MediatorReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.Limit).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Name }).IsUnique();
             e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
         });
     }

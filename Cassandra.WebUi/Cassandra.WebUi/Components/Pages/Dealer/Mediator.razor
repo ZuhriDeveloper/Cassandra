@@ -1,0 +1,356 @@
+@page "/dealer/mediator"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Mediator — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Mediator</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    @* ── Left: Create / Edit form ── *@
+    <div class="col-lg-4">
+        @if (_editingId is null)
+        {
+            <div class="card">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Mediator Baru
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Nama Mediator <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.Name" placeholder="cth. Agen Budi" />
+                            <ValidationMessage For="() => _createForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Karyawan (Sales) <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_createForm.KaryawanId">
+                                <option value="">— Pilih karyawan —</option>
+                                @foreach (var k in _karyawanList.Where(k => k.IsActive))
+                                {
+                                    <option value="@k.Id">@k.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _createForm.KaryawanId" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Alamat</label>
+                            <InputTextArea class="form-control" @bind-Value="_createForm.Address" rows="2" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Limit (Rp)</label>
+                            <InputNumber class="form-control" @bind-Value="_createForm.Limit" />
+                            <ValidationMessage For="() => _createForm.Limit" class="small text-danger" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Mediator
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-pencil me-1"></i> Ubah Mediator</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_editForm" OnValidSubmit="HandleUpdate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Nama Mediator <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.Name" />
+                            <ValidationMessage For="() => _editForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Karyawan (Sales) <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_editForm.KaryawanId">
+                                <option value="">— Pilih karyawan —</option>
+                                @foreach (var k in _karyawanList.Where(k => k.IsActive))
+                                {
+                                    <option value="@k.Id">@k.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _editForm.KaryawanId" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Alamat</label>
+                            <InputTextArea class="form-control" @bind-Value="_editForm.Address" rows="2" />
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-grow-1" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-lg me-1"></i>
+                                }
+                                Simpan
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Batal</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Right: Mediator list ── *@
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Mediator</div>
+            <div class="card-body p-0">
+                @if (_mediators is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_mediators.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada mediator yang terdaftar.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nama</th>
+                                    <th>Sales</th>
+                                    <th class="text-end">Limit</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _mediators)
+                                {
+                                    <tr class="@(_editingId == item.Id ? "table-warning" : "")">
+                                        <td class="fw-semibold">@item.Name</td>
+                                        <td class="small">@KaryawanName(item.KaryawanId)</td>
+                                        <td class="text-end small">@item.Limit.ToString("N0")</td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Tidak Aktif</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <AuthorizeView Roles="Admin">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    <button class="btn btn-sm @(_editingId == item.Id ? "btn-warning" : "btn-outline-secondary")"
+                                                            title="Ubah" @onclick="() => StartEdit(item)">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    @if (item.IsActive)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                title="Nonaktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-on"></i>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-success"
+                                                                title="Aktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-off"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </AuthorizeView>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private List<MediatorDto>? _mediators;
+    private List<KaryawanDto>  _karyawanList = [];
+    private Guid?   _editingId;
+    private string? _notice;
+    private bool    _saving;
+
+    private readonly List<string> _errors = [];
+
+    private MediatorCreateForm _createForm = new();
+    private MediatorEditForm   _editForm   = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var karyawanTask  = Api.GetKaryawanAsync();
+        var mediatorTask  = Api.GetMediatorsAsync();
+        await Task.WhenAll(karyawanTask, mediatorTask);
+        _karyawanList = karyawanTask.Result ?? [];
+        _mediators    = mediatorTask.Result ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _mediators = await Api.GetMediatorsAsync() ?? [];
+
+    private string KaryawanName(Guid karyawanId)
+    {
+        var k = _karyawanList.FirstOrDefault(x => x.Id == karyawanId);
+        return k?.Name ?? "—";
+    }
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.CreateMediatorAsync(
+            _createForm.Name.Trim(),
+            _createForm.KaryawanId,
+            _createForm.Address?.Trim() ?? string.Empty,
+            _createForm.Limit);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = $"Mediator '{_createForm.Name}' berhasil ditambahkan.";
+        _createForm = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (_editingId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var errors = await Api.UpdateMediatorAsync(
+            _editingId.Value,
+            _editForm.Name.Trim(),
+            _editForm.KaryawanId,
+            _editForm.Address?.Trim() ?? string.Empty);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice    = "Mediator berhasil diperbarui.";
+        _editingId = null;
+        _editForm  = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(MediatorDto item)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetMediatorStatusAsync(item.Id, !item.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Mediator '{item.Name}' berhasil {(item.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    private void StartEdit(MediatorDto item)
+    {
+        _editingId           = item.Id;
+        _editForm.Name       = item.Name;
+        _editForm.KaryawanId = item.KaryawanId;
+        _editForm.Address    = item.Address;
+        _errors.Clear();
+        _notice = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _editForm  = new();
+        _errors.Clear();
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class MediatorCreateForm
+    {
+        [Required(ErrorMessage = "Nama mediator wajib diisi.")]
+        [MaxLength(200, ErrorMessage = "Nama maksimal 200 karakter.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Karyawan wajib dipilih.")]
+        public Guid KaryawanId { get; set; }
+
+        [MaxLength(500)]
+        public string? Address { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Limit tidak boleh negatif.")]
+        public decimal Limit { get; set; }
+    }
+
+    private sealed class MediatorEditForm
+    {
+        [Required(ErrorMessage = "Nama mediator wajib diisi.")]
+        [MaxLength(200)]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Karyawan wajib dipilih.")]
+        public Guid KaryawanId { get; set; }
+
+        [MaxLength(500)]
+        public string? Address { get; set; }
+    }
+}
