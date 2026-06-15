@@ -70,6 +70,10 @@ public static class DependencyInjection
         services.AddScoped<Application.Contracts.Jabatan.IJabatanRepository, Jabatan.JabatanRepository>();
         services.AddScoped<Application.Contracts.Jabatan.IJabatanQueryRepository, Jabatan.JabatanQueryRepository>();
 
+        // ── Karyawan ─────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Karyawan.IKaryawanRepository, Karyawan.KaryawanRepository>();
+        services.AddScoped<Application.Contracts.Karyawan.IKaryawanQueryRepository, Karyawan.KaryawanQueryRepository>();
+
         return services;
     }
 }

@@ -5,8 +5,14 @@ using Cassandra.Application.Commands.Dealers.SetDealerStatus;
 using Cassandra.Application.Commands.Jabatan.CreateJabatan;
 using Cassandra.Application.Commands.Jabatan.SetJabatanStatus;
 using Cassandra.Application.Commands.Jabatan.UpdateJabatan;
+using Cassandra.Application.Commands.Karyawan.CreateKaryawan;
+using Cassandra.Application.Commands.Karyawan.RecordKaryawanResign;
+using Cassandra.Application.Commands.Karyawan.SetKaryawanLimit;
+using Cassandra.Application.Commands.Karyawan.SetKaryawanStatus;
+using Cassandra.Application.Commands.Karyawan.UpdateKaryawan;
 using Cassandra.Application.Queries.Dealers;
 using Cassandra.Application.Queries.Jabatan;
+using Cassandra.Application.Queries.Karyawan;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,6 +36,14 @@ public static class DependencyInjection
         services.AddScoped<UpdateJabatanCommandHandler>();
         services.AddScoped<SetJabatanStatusCommandHandler>();
         services.AddScoped<GetJabatansQueryHandler>();
+
+        // Karyawan
+        services.AddScoped<CreateKaryawanCommandHandler>();
+        services.AddScoped<UpdateKaryawanCommandHandler>();
+        services.AddScoped<SetKaryawanStatusCommandHandler>();
+        services.AddScoped<SetKaryawanLimitCommandHandler>();
+        services.AddScoped<RecordKaryawanResignCommandHandler>();
+        services.AddScoped<GetKaryawansQueryHandler>();
 
         // Validators (all assemblies scanned from this project)
         services.AddValidatorsFromAssemblyContaining<LoginCommandHandler>();

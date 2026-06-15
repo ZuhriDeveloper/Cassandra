@@ -1,0 +1,460 @@
+@page "/dealer/karyawan"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Karyawan — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Karyawan</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    @* ── Left: Create / Edit form ── *@
+    <div class="col-lg-4">
+        @if (_editingId is null)
+        {
+            <div class="card">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Karyawan Baru
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.Name" placeholder="cth. Budi Santoso" />
+                            <ValidationMessage For="() => _createForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email <span class="text-danger">*</span></label>
+                            <InputText class="form-control" type="email" @bind-Value="_createForm.Email" placeholder="budi@dealer.co.id" />
+                            <ValidationMessage For="() => _createForm.Email" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">No. KTP <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.KtpNumber" placeholder="16 digit NIK" />
+                            <ValidationMessage For="() => _createForm.KtpNumber" class="small text-danger" />
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label">Jenis Kelamin <span class="text-danger">*</span></label>
+                                <InputSelect class="form-select" @bind-Value="_createForm.Gender">
+                                    <option value="Male">Laki-laki</option>
+                                    <option value="Female">Perempuan</option>
+                                </InputSelect>
+                            </div>
+                            <div class="col">
+                                <label class="form-label">Tgl. Masuk <span class="text-danger">*</span></label>
+                                <InputDate class="form-control" @bind-Value="_createForm.HireDate" />
+                                <ValidationMessage For="() => _createForm.HireDate" class="small text-danger" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Jabatan <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_createForm.JabatanId">
+                                <option value="">— Pilih jabatan —</option>
+                                @foreach (var j in _jabatanList)
+                                {
+                                    <option value="@j.Id">@j.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _createForm.JabatanId" class="small text-danger" />
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label">No. Telepon <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="_createForm.Phone" placeholder="08xx" />
+                                <ValidationMessage For="() => _createForm.Phone" class="small text-danger" />
+                            </div>
+                            <div class="col">
+                                <label class="form-label">No. Telepon 2</label>
+                                <InputText class="form-control" @bind-Value="_createForm.PhoneAlt" placeholder="opsional" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Alamat</label>
+                            <InputTextArea class="form-control" @bind-Value="_createForm.Address" rows="2" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Sales Limit (Rp)</label>
+                            <InputNumber class="form-control" @bind-Value="_createForm.SalesLimit" />
+                            <ValidationMessage For="() => _createForm.SalesLimit" class="small text-danger" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Karyawan
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-pencil me-1"></i> Ubah Karyawan</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_editForm" OnValidSubmit="HandleUpdate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.Name" />
+                            <ValidationMessage For="() => _editForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email <span class="text-danger">*</span></label>
+                            <InputText class="form-control" type="email" @bind-Value="_editForm.Email" />
+                            <ValidationMessage For="() => _editForm.Email" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Jabatan <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_editForm.JabatanId">
+                                <option value="">— Pilih jabatan —</option>
+                                @foreach (var j in _jabatanList)
+                                {
+                                    <option value="@j.Id">@j.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _editForm.JabatanId" class="small text-danger" />
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label">No. Telepon <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="_editForm.Phone" />
+                                <ValidationMessage For="() => _editForm.Phone" class="small text-danger" />
+                            </div>
+                            <div class="col">
+                                <label class="form-label">No. Telepon 2</label>
+                                <InputText class="form-control" @bind-Value="_editForm.PhoneAlt" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Alamat</label>
+                            <InputTextArea class="form-control" @bind-Value="_editForm.Address" rows="2" />
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-grow-1" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-lg me-1"></i>
+                                }
+                                Simpan
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Batal</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Right: Karyawan list ── *@
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Karyawan</div>
+            <div class="card-body p-0">
+                @if (_karyawan is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_karyawan.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada karyawan yang terdaftar.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nama</th>
+                                    <th>Email</th>
+                                    <th>Jabatan</th>
+                                    <th class="text-end">Limit</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _karyawan)
+                                {
+                                    <tr class="@(_editingId == item.Id ? "table-warning" : "")">
+                                        <td class="fw-semibold">
+                                            @item.Name
+                                            @if (item.ResignDate.HasValue)
+                                            {
+                                                <span class="badge bg-secondary ms-1" title="Mengundurkan diri @item.ResignDate.Value.ToString("dd MMM yyyy")">Resign</span>
+                                            }
+                                        </td>
+                                        <td class="text-muted small">@item.Email</td>
+                                        <td class="small">@JabatanName(item.JabatanId)</td>
+                                        <td class="text-end small">@item.SalesLimit.ToString("N0")</td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Tidak Aktif</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <AuthorizeView Roles="Admin">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    <button class="btn btn-sm @(_editingId == item.Id ? "btn-warning" : "btn-outline-secondary")"
+                                                            title="Ubah" @onclick="() => StartEdit(item)">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    @if (item.IsActive)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                title="Nonaktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-on"></i>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-success"
+                                                                title="Aktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-off"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </AuthorizeView>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private List<KaryawanDto>? _karyawan;
+    private List<JabatanDto>   _jabatanList = [];
+    private Guid?    _editingId;
+    private string?  _notice;
+    private bool     _saving;
+
+    private readonly List<string> _errors = [];
+
+    private KaryawanCreateForm _createForm = new();
+    private KaryawanEditForm   _editForm   = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var jabatanTask  = Api.GetJabatanAsync();
+        var karyawanTask = Api.GetKaryawanAsync();
+        await Task.WhenAll(jabatanTask, karyawanTask);
+        _jabatanList = jabatanTask.Result ?? [];
+        _karyawan    = karyawanTask.Result ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _karyawan = await Api.GetKaryawanAsync() ?? [];
+
+    private string JabatanName(Guid jabatanId)
+    {
+        var j = _jabatanList.FirstOrDefault(x => x.Id == jabatanId);
+        return j?.Name ?? "—";
+    }
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.CreateKaryawanAsync(
+            _createForm.Name.Trim(),
+            _createForm.Email.Trim(),
+            _createForm.KtpNumber.Trim(),
+            _createForm.Gender,
+            _createForm.HireDate,
+            _createForm.Phone.Trim(),
+            _createForm.PhoneAlt?.Trim(),
+            _createForm.Address?.Trim() ?? string.Empty,
+            _createForm.SalesLimit,
+            _createForm.JabatanId);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = $"Karyawan '{_createForm.Name}' berhasil ditambahkan.";
+        _createForm = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (_editingId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var errors = await Api.UpdateKaryawanAsync(
+            _editingId.Value,
+            _editForm.Name.Trim(),
+            _editForm.Email.Trim(),
+            _editForm.Phone.Trim(),
+            _editForm.PhoneAlt?.Trim(),
+            _editForm.Address?.Trim() ?? string.Empty,
+            _editForm.JabatanId);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice    = "Karyawan berhasil diperbarui.";
+        _editingId = null;
+        _editForm  = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(KaryawanDto item)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetKaryawanStatusAsync(item.Id, !item.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Karyawan '{item.Name}' berhasil {(item.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    private void StartEdit(KaryawanDto item)
+    {
+        _editingId         = item.Id;
+        _editForm.Name     = item.Name;
+        _editForm.Email    = item.Email;
+        _editForm.Phone    = item.Phone;
+        _editForm.PhoneAlt = item.PhoneAlt;
+        _editForm.Address  = item.Address;
+        _editForm.JabatanId = item.JabatanId;
+        _errors.Clear();
+        _notice = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _editForm  = new();
+        _errors.Clear();
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class KaryawanCreateForm
+    {
+        [Required(ErrorMessage = "Nama wajib diisi.")]
+        [MaxLength(200, ErrorMessage = "Nama maksimal 200 karakter.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email wajib diisi.")]
+        [MaxLength(200)]
+        [EmailAddress(ErrorMessage = "Format email tidak valid.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "No. KTP wajib diisi.")]
+        [MaxLength(50)]
+        public string KtpNumber { get; set; } = string.Empty;
+
+        public string Gender { get; set; } = "Male";
+
+        [Required]
+        public DateOnly HireDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+
+        [Required(ErrorMessage = "No. telepon wajib diisi.")]
+        [MaxLength(20)]
+        public string Phone { get; set; } = string.Empty;
+
+        [MaxLength(20)]
+        public string? PhoneAlt { get; set; }
+
+        [MaxLength(500)]
+        public string? Address { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Sales limit tidak boleh negatif.")]
+        public decimal SalesLimit { get; set; }
+
+        [Required(ErrorMessage = "Jabatan wajib dipilih.")]
+        public Guid JabatanId { get; set; }
+    }
+
+    private sealed class KaryawanEditForm
+    {
+        [Required(ErrorMessage = "Nama wajib diisi.")]
+        [MaxLength(200)]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email wajib diisi.")]
+        [MaxLength(200)]
+        [EmailAddress(ErrorMessage = "Format email tidak valid.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "No. telepon wajib diisi.")]
+        [MaxLength(20)]
+        public string Phone { get; set; } = string.Empty;
+
+        [MaxLength(20)]
+        public string? PhoneAlt { get; set; }
+
+        [MaxLength(500)]
+        public string? Address { get; set; }
+
+        [Required(ErrorMessage = "Jabatan wajib dipilih.")]
+        public Guid JabatanId { get; set; }
+    }
+}

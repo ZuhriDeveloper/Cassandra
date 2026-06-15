@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
     public DbSet<StoredEvent> StoredEvents => Set<StoredEvent>();
     public DbSet<DealerReadModel> DealerReadModels => Set<DealerReadModel>();
     public DbSet<JabatanReadModel> JabatanReadModels => Set<JabatanReadModel>();
+    public DbSet<KaryawanReadModel> KaryawanReadModels => Set<KaryawanReadModel>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -51,6 +52,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
             e.Property(x => x.Description).HasMaxLength(500);
             e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
             e.HasIndex(x => new { x.DealerId, x.Name }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<KaryawanReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Email).HasMaxLength(200).IsRequired();
+            e.Property(x => x.KtpNumber).HasMaxLength(50).IsRequired();
+            e.Property(x => x.Gender).HasMaxLength(10).IsRequired();
+            e.Property(x => x.Phone).HasMaxLength(20).IsRequired();
+            e.Property(x => x.PhoneAlt).HasMaxLength(20);
+            e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.SalesLimit).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.HasIndex(x => new { x.DealerId, x.Email }).IsUnique();
             e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
         });
     }
