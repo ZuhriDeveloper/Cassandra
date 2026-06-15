@@ -66,8 +66,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(Cassandra.WebUi.Client._Imports).Assembly);
+    .AddInteractiveWebAssemblyRenderMode();
 
 app.MapPost("/account/logout", async (HttpContext context) =>
 {

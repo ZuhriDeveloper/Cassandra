@@ -10,7 +10,6 @@
   <ItemGroup>
     <PackageReference Include="MudBlazor" Version="9.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.8" />
-    <ProjectReference Include="..\Cassandra.WebUi.Client\Cassandra.WebUi.Client.csproj" />
     <ProjectReference Include="..\..\Cassandra.ServiceDefaults\Cassandra.ServiceDefaults.csproj" />
   </ItemGroup>
 

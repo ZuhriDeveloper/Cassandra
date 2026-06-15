@@ -6,7 +6,6 @@
     <Project Path="Cassandra.Backend/Cassandra.WebApi/Cassandra.WebApi.csproj" />
   </Folder>
   <Folder Name="/Cassandra.WebUi/">
-    <Project Path="Cassandra.WebUi/Cassandra.WebUi.Client/Cassandra.WebUi.Client.csproj" />
     <Project Path="Cassandra.WebUi/Cassandra.WebUi/Cassandra.WebUi.csproj" />
   </Folder>
   <Project Path="Cassandra.AppHost/Cassandra.AppHost.csproj" />
