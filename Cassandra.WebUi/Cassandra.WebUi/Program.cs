@@ -51,6 +51,10 @@ builder.Services.AddHttpClient<DealerUsersApiClient>(client =>
     client.BaseAddress = new Uri(apiBaseUrl))
     .AddHttpMessageHandler<BearerTokenHandler>();
 
+builder.Services.AddHttpClient<MasterDataApiClient>(client =>
+    client.BaseAddress = new Uri(apiBaseUrl))
+    .AddHttpMessageHandler<BearerTokenHandler>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

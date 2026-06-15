@@ -55,6 +55,30 @@
 
     </AuthorizeView>
 
+    @* ── Master Data (Admin, Sales, Cashier) ── *@
+    <AuthorizeView Roles="Admin,Sales,Cashier">
+
+        @if (_drawerOpen)
+        {
+            <MudText Typo="Typo.overline" Class="px-4 pt-3 pb-0 d-block"
+                     Style="font-size:.6rem;letter-spacing:.1em;
+                            color:var(--mud-palette-drawer-text);opacity:.5">
+                Master Data
+            </MudText>
+        }
+        else
+        {
+            <MudDivider Class="my-2 mx-2" />
+        }
+
+        <MudNavGroup Title="Master Data" Icon="@Icons.Material.Filled.Folder" Expanded="false">
+            <MudNavLink Href="dealer/jabatan" Icon="@Icons.Material.Filled.Badge">
+                Jabatan
+            </MudNavLink>
+        </MudNavGroup>
+
+    </AuthorizeView>
+
 </MudNavMenu>
 
 @code {

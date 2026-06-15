@@ -1,3 +1,4 @@
+using Cassandra.Application.Contracts.Dealers;
 using Cassandra.Infrastructure.Identity;
 using Cassandra.Infrastructure.Persistence.EventStore;
 using Cassandra.Infrastructure.Persistence.Projections;
@@ -6,11 +7,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cassandra.Infrastructure.Persistence;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options)
+public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer currentDealer)
     : IdentityDbContext<ApplicationUser>(options)
 {
+    private Guid? CurrentDealerId => currentDealer.DealerIdOrNull;
+
     public DbSet<StoredEvent> StoredEvents => Set<StoredEvent>();
     public DbSet<DealerReadModel> DealerReadModels => Set<DealerReadModel>();
+    public DbSet<JabatanReadModel> JabatanReadModels => Set<JabatanReadModel>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -37,9 +41,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             e.HasIndex(x => x.Code).IsUnique();
         });
 
-        // NOTE: When the first dealer-scoped transactional read model is added, inject
-        // ICurrentDealer into this context and apply the null-tolerant global query filter
-        // pattern (x => CurrentDealerId == null || x.DealerId == CurrentDealerId) to it,
-        // mirroring Materia's AppDbContext. The dealer registry and event store stay excluded.
+        // ── Dealer-scoped read models ───────────────────────────────────────────
+        // Null-tolerant filter: when DealerId is null (SuperAdmin / migrations / background),
+        // no filter is applied and all rows are visible.
+        builder.Entity<JabatanReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.HasIndex(x => new { x.DealerId, x.Name }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
     }
 }

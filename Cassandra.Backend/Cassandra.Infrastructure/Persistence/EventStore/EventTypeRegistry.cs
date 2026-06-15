@@ -1,5 +1,6 @@
 using Cassandra.Domain.Common;
 using Cassandra.Domain.Dealers.Events;
+using Cassandra.Domain.Jabatan.Events;
 
 namespace Cassandra.Infrastructure.Persistence.EventStore;
 
@@ -12,6 +13,12 @@ public static class EventTypeRegistry
         [nameof(DealerRenamed)]     = typeof(DealerRenamed),
         [nameof(DealerActivated)]   = typeof(DealerActivated),
         [nameof(DealerDeactivated)] = typeof(DealerDeactivated),
+
+        // Jabatan (dealer-scoped) events
+        [nameof(JabatanCreated)]    = typeof(JabatanCreated),
+        [nameof(JabatanUpdated)]    = typeof(JabatanUpdated),
+        [nameof(JabatanActivated)]  = typeof(JabatanActivated),
+        [nameof(JabatanDeactivated)] = typeof(JabatanDeactivated),
     };
 
     public static Type Resolve(string eventType) =>

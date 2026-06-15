@@ -1,0 +1,313 @@
+@page "/dealer/jabatan"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Jabatan — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Jabatan</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    @* ── Left: Create / Edit form ── *@
+    <div class="col-lg-4">
+        @if (_editingId is null)
+        {
+            <div class="card">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Jabatan Baru
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Nama Jabatan <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.Name"
+                                       placeholder="cth. Kepala Mekanik" />
+                            <ValidationMessage For="() => _createForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Deskripsi</label>
+                            <InputTextArea class="form-control" @bind-Value="_createForm.Description"
+                                          rows="3"
+                                          placeholder="Deskripsi singkat tentang jabatan ini" />
+                            <ValidationMessage For="() => _createForm.Description" class="small text-danger" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Jabatan
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-pencil me-1"></i> Ubah Jabatan</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_editForm" OnValidSubmit="HandleUpdate">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Nama Jabatan <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.Name" />
+                            <ValidationMessage For="() => _editForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Deskripsi</label>
+                            <InputTextArea class="form-control" @bind-Value="_editForm.Description"
+                                          rows="3" />
+                            <ValidationMessage For="() => _editForm.Description" class="small text-danger" />
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-grow-1" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-lg me-1"></i>
+                                }
+                                Simpan
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">
+                                Batal
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Right: Jabatan list ── *@
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Jabatan</div>
+            <div class="card-body p-0">
+                @if (_jabatan is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_jabatan.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada jabatan yang terdaftar.</div>
+                }
+                else
+                {
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nama Jabatan</th>
+                                <th>Deskripsi</th>
+                                <th>Status</th>
+                                <th class="text-end">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in _jabatan)
+                            {
+                                <tr class="@(_editingId == item.Id ? "table-warning" : "")">
+                                    <td class="fw-semibold">@item.Name</td>
+                                    <td class="text-muted small">
+                                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                                        {
+                                            @item.Description
+                                        }
+                                        else
+                                        {
+                                            <span class="fst-italic">—</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (item.IsActive)
+                                        {
+                                            <span class="badge bg-success">Aktif</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Tidak Aktif</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <AuthorizeView Roles="Admin">
+                                            <div class="d-flex gap-1 justify-content-end">
+                                                <button class="btn btn-sm @(_editingId == item.Id ? "btn-warning" : "btn-outline-secondary")"
+                                                        title="Ubah" @onclick="() => StartEdit(item)">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                @if (item.IsActive)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-danger"
+                                                            title="Nonaktifkan"
+                                                            @onclick="() => HandleToggleStatus(item)">
+                                                        <i class="bi bi-toggle-on"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-sm btn-outline-success"
+                                                            title="Aktifkan"
+                                                            @onclick="() => HandleToggleStatus(item)">
+                                                        <i class="bi bi-toggle-off"></i>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </AuthorizeView>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private List<JabatanDto>? _jabatan;
+    private Guid?   _editingId;
+    private string? _notice;
+    private bool    _saving;
+
+    private readonly List<string> _errors = [];
+
+    private JabatanCreateForm _createForm = new();
+    private JabatanEditForm   _editForm   = new();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+        => _jabatan = await Api.GetJabatanAsync() ?? [];
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.CreateJabatanAsync(
+            _createForm.Name.Trim(),
+            _createForm.Description?.Trim() ?? string.Empty);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = $"Jabatan '{_createForm.Name}' berhasil ditambahkan.";
+        _createForm = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (_editingId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var errors = await Api.UpdateJabatanAsync(
+            _editingId.Value,
+            _editForm.Name.Trim(),
+            _editForm.Description?.Trim() ?? string.Empty);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice    = "Jabatan berhasil diperbarui.";
+        _editingId = null;
+        _editForm  = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(JabatanDto item)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetJabatanStatusAsync(item.Id, !item.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Jabatan '{item.Name}' berhasil {(item.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    private void StartEdit(JabatanDto item)
+    {
+        _editingId           = item.Id;
+        _editForm.Name       = item.Name;
+        _editForm.Description = item.Description;
+        _errors.Clear();
+        _notice = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _editForm  = new();
+        _errors.Clear();
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class JabatanCreateForm
+    {
+        [Required(ErrorMessage = "Nama jabatan wajib diisi.")]
+        [MaxLength(100, ErrorMessage = "Nama jabatan maksimal 100 karakter.")]
+        public string Name { get; set; } = string.Empty;
+
+        [MaxLength(500, ErrorMessage = "Deskripsi maksimal 500 karakter.")]
+        public string? Description { get; set; }
+    }
+
+    private sealed class JabatanEditForm
+    {
+        [Required(ErrorMessage = "Nama jabatan wajib diisi.")]
+        [MaxLength(100, ErrorMessage = "Nama jabatan maksimal 100 karakter.")]
+        public string Name { get; set; } = string.Empty;
+
+        [MaxLength(500, ErrorMessage = "Deskripsi maksimal 500 karakter.")]
+        public string? Description { get; set; }
+    }
+}

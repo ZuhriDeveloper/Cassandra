@@ -1,3 +1,4 @@
+using Cassandra.Application.Contracts.Dealers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -16,6 +17,14 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
             .UseNpgsql("Host=localhost;Database=cassandradb;Username=postgres;Password=postgres")
             .Options;
 
-        return new AppDbContext(options);
+        return new AppDbContext(options, new NullCurrentDealer());
+    }
+
+    // Returns null for all dealer properties — global query filters become pass-through.
+    private sealed class NullCurrentDealer : ICurrentDealer
+    {
+        public Guid DealerId => throw new InvalidOperationException("No dealer in design-time context.");
+        public Guid? DealerIdOrNull => null;
+        public bool IsSuperAdmin => false;
     }
 }
