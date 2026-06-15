@@ -40,9 +40,16 @@ var apiBaseUrl = builder.Configuration["ApiService:BaseUrl"] ?? "https://localho
 builder.Services.AddHttpClient<AuthService>(client =>
     client.BaseAddress = new Uri(apiBaseUrl));
 
-// Ready for authenticated API clients: register them with
-//   builder.Services.AddHttpClient<MyApiClient>(...).AddHttpMessageHandler<BearerTokenHandler>();
 builder.Services.AddTransient<BearerTokenHandler>();
+
+// Authenticated API clients (JWT attached by BearerTokenHandler).
+builder.Services.AddHttpClient<PlatformApiClient>(client =>
+    client.BaseAddress = new Uri(apiBaseUrl))
+    .AddHttpMessageHandler<BearerTokenHandler>();
+
+builder.Services.AddHttpClient<DealerUsersApiClient>(client =>
+    client.BaseAddress = new Uri(apiBaseUrl))
+    .AddHttpMessageHandler<BearerTokenHandler>();
 
 var app = builder.Build();
 
@@ -100,6 +107,8 @@ app.MapPost("/account/login-handler", async (
         new(ClaimTypes.Name, data.FullName ?? data.Email),
         new("access_token", data.Token),
     };
+    if (data.DealerId is Guid dealerId)
+        claims.Add(new Claim("dealerId", dealerId.ToString()));
     claims.AddRange(data.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
     var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);

@@ -1,0 +1,171 @@
+@page "/platform/users"
+@attribute [Authorize(Roles = "SuperAdmin")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject PlatformApiClient Api
+
+<PageTitle>Pengguna — Cassandra Platform</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Buat Pengguna Dealer</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header fw-semibold">
+                <i class="bi bi-person-plus me-1"></i> Detail Pengguna
+            </div>
+            <div class="card-body">
+                @if (_dealers is null)
+                {
+                    <div class="text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat dealer…
+                    </div>
+                }
+                else if (_dealers.Count == 0)
+                {
+                    <div class="text-muted">
+                        Belum ada dealer. <a href="platform/dealers">Daftarkan dealer</a> terlebih dahulu.
+                    </div>
+                }
+                else
+                {
+                    <EditForm Model="_form" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Dealer <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_form.DealerId">
+                                <option value="">— Pilih dealer —</option>
+                                @foreach (var d in _dealers)
+                                {
+                                    <option value="@d.Id">@d.Name (@d.Code)</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _form.DealerId" class="small text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Peran <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_form.Role">
+                                @foreach (var r in AssignableRoles)
+                                {
+                                    <option value="@r">@r</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _form.Role" class="small text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_form.FullName" />
+                            <ValidationMessage For="() => _form.FullName" class="small text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email <span class="text-danger">*</span></label>
+                            <InputText class="form-control" type="email" @bind-Value="_form.Email" />
+                            <ValidationMessage For="() => _form.Email" class="small text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Kata Sandi <span class="text-danger">*</span></label>
+                            <InputText class="form-control" type="password" @bind-Value="_form.Password" />
+                            <div class="form-text">Minimal 8 karakter, mengandung huruf besar dan angka.</div>
+                            <ValidationMessage For="() => _form.Password" class="small text-danger" />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Buat Pengguna
+                        </button>
+                    </EditForm>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private static readonly string[] AssignableRoles = ["Admin", "Sales", "Cashier"];
+
+    private List<DealerDto>? _dealers;
+    private string? _notice;
+    private bool    _saving;
+    private readonly List<string> _errors = [];
+
+    private UserForm _form = new();
+
+    protected override async Task OnInitializedAsync()
+        => _dealers = await Api.GetDealersAsync() ?? [];
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (_, errors) = await Api.RegisterUserAsync(
+            _form.Email.Trim(),
+            _form.FullName.Trim(),
+            _form.Password,
+            _form.Role,
+            Guid.Parse(_form.DealerId));
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Pengguna '{_form.Email}' berhasil dibuat.";
+        _form   = new();
+    }
+
+    private sealed class UserForm
+    {
+        [Required(ErrorMessage = "Dealer wajib dipilih.")]
+        public string DealerId { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Peran wajib dipilih.")]
+        public string Role { get; set; } = "Sales";
+
+        [Required(ErrorMessage = "Nama lengkap wajib diisi.")]
+        [MaxLength(200)]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email wajib diisi.")]
+        [EmailAddress(ErrorMessage = "Email tidak valid.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Kata sandi wajib diisi.")]
+        [MinLength(8, ErrorMessage = "Kata sandi minimal 8 karakter.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

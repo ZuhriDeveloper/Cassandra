@@ -60,6 +60,12 @@ public static class DependencyInjection
         services.AddScoped<IUserProvisioningService, UserProvisioningService>();
         services.AddScoped<DatabaseInitializer>();
 
+        // ── Multi-tenant (dealer scoping) ───────────────────────────────────────
+        services.AddHttpContextAccessor();
+        services.AddScoped<Application.Contracts.Dealers.ICurrentDealer, Dealers.CurrentDealer>();
+        services.AddScoped<Application.Contracts.Dealers.IDealerRepository, Dealers.DealerRepository>();
+        services.AddScoped<Application.Contracts.Dealers.IDealerQueryRepository, Dealers.DealerQueryRepository>();
+
         return services;
     }
 }

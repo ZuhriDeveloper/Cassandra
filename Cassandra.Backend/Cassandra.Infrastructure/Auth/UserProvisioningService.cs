@@ -1,3 +1,4 @@
+using Cassandra.Application.Authorization;
 using Cassandra.Application.Contracts.Auth;
 using Cassandra.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -13,8 +14,13 @@ public class UserProvisioningService(
         string fullName,
         string password,
         string role,
+        Guid? dealerId,
         CancellationToken ct = default)
     {
+        // SuperAdmin is a platform role that is seeded only — never provisioned via the API.
+        if (role == Roles.SuperAdmin)
+            return new UserProvisioningResult(false, null, ["The SuperAdmin role cannot be provisioned."]);
+
         if (!await roleManager.RoleExistsAsync(role))
             return new UserProvisioningResult(false, null, [$"Role '{role}' does not exist."]);
 
@@ -24,6 +30,7 @@ public class UserProvisioningService(
             Email = email,
             FullName = fullName,
             EmailConfirmed = true,
+            DealerId = dealerId,
         };
 
         var create = await userManager.CreateAsync(user, password);

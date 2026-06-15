@@ -7,7 +7,33 @@
         Beranda
     </MudNavLink>
 
-    @* ── User management (Admin only) ── *@
+    @* ── Platform administration (SuperAdmin only) ── *@
+    <AuthorizeView Roles="SuperAdmin">
+
+        @if (_drawerOpen)
+        {
+            <MudText Typo="Typo.overline" Class="px-4 pt-3 pb-0 d-block"
+                     Style="font-size:.6rem;letter-spacing:.1em;
+                            color:var(--mud-palette-drawer-text);opacity:.5">
+                Platform
+            </MudText>
+        }
+        else
+        {
+            <MudDivider Class="my-2 mx-2" />
+        }
+
+        <MudNavLink Href="platform/dealers" Icon="@Icons.Material.Filled.Storefront">
+            Dealer
+        </MudNavLink>
+
+        <MudNavLink Href="platform/users" Icon="@Icons.Material.Filled.ManageAccounts">
+            Pengguna
+        </MudNavLink>
+
+    </AuthorizeView>
+
+    @* ── Dealer staff management (dealer Admin only) ── *@
     <AuthorizeView Roles="Admin">
 
         @if (_drawerOpen)
@@ -23,8 +49,8 @@
             <MudDivider Class="my-2 mx-2" />
         }
 
-        <MudNavLink Href="platform/users" Icon="@Icons.Material.Filled.ManageAccounts">
-            Pengguna
+        <MudNavLink Href="dealer/users" Icon="@Icons.Material.Filled.Group">
+            Staf
         </MudNavLink>
 
     </AuthorizeView>

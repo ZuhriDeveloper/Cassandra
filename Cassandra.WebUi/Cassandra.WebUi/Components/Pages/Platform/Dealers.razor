@@ -1,0 +1,294 @@
+@page "/platform/dealers"
+@attribute [Authorize(Roles = "SuperAdmin")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject PlatformApiClient Api
+
+<PageTitle>Dealer — Cassandra Platform</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Dealer</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    @* ── Left: Create / Rename form ── *@
+    <div class="col-lg-4">
+        @if (_editingId is null)
+        {
+            <div class="card">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Daftarkan Dealer Baru
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Nama Dealer <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.Name"
+                                       placeholder="cth. Dealer Bandung" />
+                            <ValidationMessage For="() => _createForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Kode Dealer <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.Code"
+                                       placeholder="cth. BDG-01"
+                                       style="text-transform:uppercase"
+                                       @oninput="e => _createForm.Code = e.Value?.ToString()?.ToUpperInvariant() ?? string.Empty" />
+                            <div class="form-text">Kode unik, huruf kapital. Tidak dapat diubah setelah dibuat.</div>
+                            <ValidationMessage For="() => _createForm.Code" class="small text-danger" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Daftarkan Dealer
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-pencil me-1"></i> Ubah Nama Dealer</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_editForm" OnValidSubmit="HandleRename">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Nama Baru <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.Name" />
+                            <ValidationMessage For="() => _editForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-grow-1" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-lg me-1"></i>
+                                }
+                                Simpan
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">
+                                Batal
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Right: Dealer list ── *@
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Dealer</div>
+            <div class="card-body p-0">
+                @if (_dealers is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_dealers.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada dealer terdaftar.</div>
+                }
+                else
+                {
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nama</th>
+                                <th>Kode</th>
+                                <th>Status</th>
+                                <th class="text-end">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var dealer in _dealers)
+                            {
+                                <tr class="@(_editingId == dealer.Id ? "table-warning" : "")">
+                                    <td class="fw-semibold">@dealer.Name</td>
+                                    <td><span class="badge text-bg-secondary font-monospace">@dealer.Code</span></td>
+                                    <td>
+                                        @if (dealer.IsActive)
+                                        {
+                                            <span class="badge bg-success">Aktif</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Tidak Aktif</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <button class="btn btn-sm @(_editingId == dealer.Id ? "btn-warning" : "btn-outline-secondary")"
+                                                    title="Ubah Nama" @onclick="() => StartEdit(dealer)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            @if (dealer.IsActive)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        title="Nonaktifkan"
+                                                        @onclick="() => HandleToggleStatus(dealer)">
+                                                    <i class="bi bi-toggle-on"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-outline-success"
+                                                        title="Aktifkan"
+                                                        @onclick="() => HandleToggleStatus(dealer)">
+                                                    <i class="bi bi-toggle-off"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private List<DealerDto>? _dealers;
+    private Guid?   _editingId;
+    private string? _notice;
+    private bool    _saving;
+
+    private readonly List<string> _errors = [];
+
+    private DealerCreateForm _createForm = new();
+    private DealerRenameForm _editForm   = new();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+        => _dealers = await Api.GetDealersAsync() ?? [];
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.RegisterDealerAsync(
+            _createForm.Name.Trim(),
+            _createForm.Code.Trim().ToUpperInvariant());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = $"Dealer '{_createForm.Name}' berhasil didaftarkan.";
+        _createForm = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleRename()
+    {
+        if (_editingId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var errors = await Api.RenameDealerAsync(_editingId.Value, _editForm.Name.Trim());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice    = "Nama dealer berhasil diperbarui.";
+        _editingId = null;
+        _editForm  = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(DealerDto dealer)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetDealerStatusAsync(dealer.Id, !dealer.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Dealer '{dealer.Name}' berhasil {(dealer.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    private void StartEdit(DealerDto dealer)
+    {
+        _editingId     = dealer.Id;
+        _editForm.Name = dealer.Name;
+        _errors.Clear();
+        _notice = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _editForm  = new();
+        _errors.Clear();
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class DealerCreateForm
+    {
+        [Required(ErrorMessage = "Nama dealer wajib diisi.")]
+        [MaxLength(200)]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Kode dealer wajib diisi.")]
+        [MaxLength(30)]
+        [RegularExpression(@"^[A-Z0-9\-]+$",
+            ErrorMessage = "Kode hanya boleh berisi huruf kapital, angka, dan tanda hubung.")]
+        public string Code { get; set; } = string.Empty;
+    }
+
+    private sealed class DealerRenameForm
+    {
+        [Required(ErrorMessage = "Nama dealer wajib diisi.")]
+        [MaxLength(200)]
+        public string Name { get; set; } = string.Empty;
+    }
+}

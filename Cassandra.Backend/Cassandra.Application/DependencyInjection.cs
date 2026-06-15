@@ -1,4 +1,8 @@
 using Cassandra.Application.Commands.Auth;
+using Cassandra.Application.Commands.Dealers.RegisterDealer;
+using Cassandra.Application.Commands.Dealers.RenameDealer;
+using Cassandra.Application.Commands.Dealers.SetDealerStatus;
+using Cassandra.Application.Queries.Dealers;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,6 +14,12 @@ public static class DependencyInjection
     {
         // Auth
         services.AddScoped<LoginCommandHandler>();
+
+        // Dealers
+        services.AddScoped<RegisterDealerCommandHandler>();
+        services.AddScoped<RenameDealerCommandHandler>();
+        services.AddScoped<SetDealerStatusCommandHandler>();
+        services.AddScoped<GetDealersQueryHandler>();
 
         // Validators (all assemblies scanned from this project)
         services.AddValidatorsFromAssemblyContaining<LoginCommandHandler>();

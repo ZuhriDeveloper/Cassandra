@@ -1,7 +1,8 @@
 namespace Cassandra.Application.Contracts.Auth;
 
 /// <summary>
-/// Provisions user accounts. Used by an Admin to create staff (Sales / Cashier) accounts.
+/// Provisions user accounts. A SuperAdmin provisions a dealer's users (assigning the dealer
+/// explicitly); a dealer Admin provisions their own staff (the dealer comes from their token).
 /// </summary>
 public interface IUserProvisioningService
 {
@@ -10,6 +11,7 @@ public interface IUserProvisioningService
         string fullName,
         string password,
         string role,
+        Guid? dealerId,
         CancellationToken ct = default);
 }
 

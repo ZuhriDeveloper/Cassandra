@@ -23,6 +23,10 @@ public class JwtTokenService(IConfiguration configuration) : ITokenService
             new("fullName", user.FullName ?? string.Empty),
         };
 
+        // Dealer scope (multi-tenant). Absent for a platform SuperAdmin, who is unscoped.
+        if (user.DealerId is Guid dealerId)
+            claims.Add(new Claim("dealerId", dealerId.ToString()));
+
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
         var token = new JwtSecurityToken(

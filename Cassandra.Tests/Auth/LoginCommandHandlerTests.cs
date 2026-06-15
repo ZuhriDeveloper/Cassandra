@@ -1,5 +1,7 @@
 using Cassandra.Application.Commands.Auth;
 using Cassandra.Application.Contracts.Auth;
+using Cassandra.Application.Contracts.Dealers;
+using Cassandra.Application.DTOs.Dealers;
 
 namespace Cassandra.Tests.Auth;
 
@@ -18,7 +20,7 @@ public class LoginCommandHandlerTests
             Password = CorrectPassword,
             Roles = ["Admin"],
         };
-        var handler = new LoginCommandHandler(repo, new FakeTokenService());
+        var handler = new LoginCommandHandler(repo, new FakeTokenService(), new FakeDealerQueryRepository());
 
         var result = await handler.HandleAsync(new LoginCommand(KnownEmail, CorrectPassword), TestContext.Current.CancellationToken);
 
@@ -40,7 +42,7 @@ public class LoginCommandHandlerTests
             Password = CorrectPassword,
             Roles = ["Admin"],
         };
-        var handler = new LoginCommandHandler(repo, new FakeTokenService());
+        var handler = new LoginCommandHandler(repo, new FakeTokenService(), new FakeDealerQueryRepository());
 
         var result = await handler.HandleAsync(new LoginCommand(KnownEmail, "wrong-password"), TestContext.Current.CancellationToken);
 
@@ -59,7 +61,7 @@ public class LoginCommandHandlerTests
             Password = CorrectPassword,
             LockedOut = true,
         };
-        var handler = new LoginCommandHandler(repo, new FakeTokenService());
+        var handler = new LoginCommandHandler(repo, new FakeTokenService(), new FakeDealerQueryRepository());
 
         var result = await handler.HandleAsync(new LoginCommand(KnownEmail, CorrectPassword), TestContext.Current.CancellationToken);
 
@@ -72,12 +74,32 @@ public class LoginCommandHandlerTests
     public async Task Fails_when_email_unknown()
     {
         var repo = new FakeUserAuthRepository { User = null };
-        var handler = new LoginCommandHandler(repo, new FakeTokenService());
+        var handler = new LoginCommandHandler(repo, new FakeTokenService(), new FakeDealerQueryRepository());
 
         var result = await handler.HandleAsync(new LoginCommand("nobody@cassandra.local", "whatever1"), TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Equal("Invalid email or password.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Fails_when_dealer_is_inactive()
+    {
+        var dealerId = Guid.NewGuid();
+        var repo = new FakeUserAuthRepository
+        {
+            User = new UserAuthInfo(KnownId, KnownEmail, "Admin Cassandra", dealerId),
+            Password = CorrectPassword,
+            Roles = ["Admin"],
+        };
+        var handler = new LoginCommandHandler(repo, new FakeTokenService(),
+            new FakeDealerQueryRepository { Dealer = new DealerDto(dealerId, "Dealer Pusat", "D1", IsActive: false) });
+
+        var result = await handler.HandleAsync(new LoginCommand(KnownEmail, CorrectPassword), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("inactive", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.False(repo.ResetCalled);
     }
 
     private sealed class FakeUserAuthRepository : IUserAuthRepository
@@ -116,5 +138,22 @@ public class LoginCommandHandlerTests
     private sealed class FakeTokenService : ITokenService
     {
         public string GenerateToken(UserAuthInfo user, IReadOnlyList<string> roles) => "token-for-" + user.Id;
+    }
+
+    private sealed class FakeDealerQueryRepository : IDealerQueryRepository
+    {
+        // When unset, returns an active dealer so dealer-scoped tests that don't care
+        // about status still succeed. SuperAdmin tests pass a null DealerId, so this is
+        // never consulted for them.
+        public DealerDto? Dealer { get; init; }
+
+        public Task<DealerDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult<DealerDto?>(Dealer ?? new DealerDto(id, "Default", "D1", true));
+
+        public Task<IReadOnlyList<DealerDto>> GetAllAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<DealerDto>>(Dealer is null ? [] : [Dealer]);
+
+        public Task<bool> CodeExistsAsync(string code, CancellationToken ct = default)
+            => Task.FromResult(false);
     }
 }
