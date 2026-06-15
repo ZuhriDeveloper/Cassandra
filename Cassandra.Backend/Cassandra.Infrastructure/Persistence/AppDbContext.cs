@@ -18,6 +18,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
     public DbSet<KaryawanReadModel> KaryawanReadModels => Set<KaryawanReadModel>();
     public DbSet<KiosReadModel> KiosReadModels => Set<KiosReadModel>();
     public DbSet<MediatorReadModel> MediatorReadModels => Set<MediatorReadModel>();
+    public DbSet<WarnaReadModel> WarnaReadModels => Set<WarnaReadModel>();
+    public DbSet<GrupTipeMotorReadModel> GrupTipeMotorReadModels => Set<GrupTipeMotorReadModel>();
+    public DbSet<TipeMotorReadModel> TipeMotorReadModels => Set<TipeMotorReadModel>();
+    public DbSet<TipeMotorWarnaReadModel> TipeMotorWarnaReadModels => Set<TipeMotorWarnaReadModel>();
+    public DbSet<KelengkapanReadModel> KelengkapanReadModels => Set<KelengkapanReadModel>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -94,6 +99,63 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
             e.Property(x => x.Name).HasMaxLength(200).IsRequired();
             e.Property(x => x.Address).HasMaxLength(500);
             e.Property(x => x.Limit).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Name }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<WarnaReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Code }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<GrupTipeMotorReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Code }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<TipeMotorReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.Property(x => x.ShortName).HasMaxLength(100).IsRequired();
+            e.Property(x => x.ProductCode).HasMaxLength(100);
+            e.Property(x => x.WmsCode).HasMaxLength(100);
+            e.Property(x => x.AhmCode).HasMaxLength(100);
+            e.Property(x => x.EngineNumberFormat).HasMaxLength(100);
+            e.Property(x => x.ChassisNumberFormat).HasMaxLength(100);
+            e.Property(x => x.NettPrice).HasColumnType("numeric(18,2)");
+            e.Property(x => x.OrJakarta).HasColumnType("numeric(18,2)");
+            e.Property(x => x.OrTangerang).HasColumnType("numeric(18,2)");
+            e.Property(x => x.BbnJakarta).HasColumnType("numeric(18,2)");
+            e.Property(x => x.BbnTangerang).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Code }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<TipeMotorWarnaReadModel>(e =>
+        {
+            e.HasKey(x => new { x.TipeMotorId, x.WarnaId });
+        });
+
+        builder.Entity<KelengkapanReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
             e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
             e.Property(x => x.UpdatedBy).HasMaxLength(100);
             e.HasIndex(x => new { x.DealerId, x.Name }).IsUnique();

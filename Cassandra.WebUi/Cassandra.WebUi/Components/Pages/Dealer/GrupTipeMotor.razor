@@ -1,0 +1,195 @@
+@page "/dealer/grup-tipe-motor"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Grup Tipe Motor — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Grup Tipe Motor</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    @* ── Left: Create form ── *@
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header fw-semibold">
+                <i class="bi bi-plus-circle me-1"></i> Tambah Grup Baru
+            </div>
+            <div class="card-body">
+                <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label class="form-label">Kode <span class="text-danger">*</span></label>
+                        <InputText class="form-control text-uppercase" @bind-Value="_createForm.Code"
+                                   @oninput="e => _createForm.Code = e.Value?.ToString()?.ToUpperInvariant() ?? string.Empty"
+                                   placeholder="cth. SPORT" />
+                        <ValidationMessage For="() => _createForm.Code" class="small text-danger" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-lg me-1"></i>
+                        }
+                        Simpan Grup
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    @* ── Right: Grup list ── *@
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Grup Tipe Motor</div>
+            <div class="card-body p-0">
+                @if (_grupList is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_grupList.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada grup yang terdaftar.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Kode</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _grupList)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@item.Code</td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Tidak Aktif</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <AuthorizeView Roles="Admin">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    @if (item.IsActive)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                title="Nonaktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-on"></i>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-success"
+                                                                title="Aktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-off"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </AuthorizeView>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private List<GrupTipeMotorDto>? _grupList;
+    private string? _notice;
+    private bool    _saving;
+
+    private readonly List<string> _errors = [];
+
+    private GrupTipeMotorCreateForm _createForm = new();
+
+    protected override async Task OnInitializedAsync()
+        => _grupList = await Api.GetGrupTipeMotorAsync() ?? [];
+
+    private async Task LoadAsync()
+        => _grupList = await Api.GetGrupTipeMotorAsync() ?? [];
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.CreateGrupTipeMotorAsync(_createForm.Code.Trim());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = $"Grup '{_createForm.Code}' berhasil ditambahkan.";
+        _createForm = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(GrupTipeMotorDto item)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetGrupTipeMotorStatusAsync(item.Id, !item.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Grup '{item.Code}' berhasil {(item.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class GrupTipeMotorCreateForm
+    {
+        [Required(ErrorMessage = "Kode wajib diisi.")]
+        [MaxLength(50, ErrorMessage = "Kode maksimal 50 karakter.")]
+        public string Code { get; set; } = string.Empty;
+    }
+}

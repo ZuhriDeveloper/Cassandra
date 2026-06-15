@@ -82,6 +82,22 @@ public static class DependencyInjection
         services.AddScoped<Application.Contracts.Mediator.IMediatorRepository, Mediator.MediatorRepository>();
         services.AddScoped<Application.Contracts.Mediator.IMediatorQueryRepository, Mediator.MediatorQueryRepository>();
 
+        // ── Warna ─────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Warna.IWarnaRepository, Warna.WarnaRepository>();
+        services.AddScoped<Application.Contracts.Warna.IWarnaQueryRepository, Warna.WarnaQueryRepository>();
+
+        // ── GrupTipeMotor ─────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.GrupTipeMotor.IGrupTipeMotorRepository, GrupTipeMotor.GrupTipeMotorRepository>();
+        services.AddScoped<Application.Contracts.GrupTipeMotor.IGrupTipeMotorQueryRepository, GrupTipeMotor.GrupTipeMotorQueryRepository>();
+
+        // ── TipeMotor ─────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.TipeMotor.ITipeMotorRepository, TipeMotor.TipeMotorRepository>();
+        services.AddScoped<Application.Contracts.TipeMotor.ITipeMotorQueryRepository, TipeMotor.TipeMotorQueryRepository>();
+
+        // ── Kelengkapan ───────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Kelengkapan.IKelengkapanRepository, Kelengkapan.KelengkapanRepository>();
+        services.AddScoped<Application.Contracts.Kelengkapan.IKelengkapanQueryRepository, Kelengkapan.KelengkapanQueryRepository>();
+
         return services;
     }
 }

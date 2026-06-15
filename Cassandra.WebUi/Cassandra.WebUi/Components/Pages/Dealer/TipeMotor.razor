@@ -1,0 +1,642 @@
+@page "/dealer/tipe-motor"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Tipe Motor — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Tipe Motor</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    @* ── Left: Create / Edit form ── *@
+    <div class="col-lg-5">
+        @if (_editingId is null)
+        {
+            <div class="card">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Tipe Motor Baru
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Kode <span class="text-danger">*</span></label>
+                            <InputText class="form-control text-uppercase" @bind-Value="_createForm.Code"
+                                       @oninput="e => _createForm.Code = e.Value?.ToString()?.ToUpperInvariant() ?? string.Empty"
+                                       placeholder="cth. CBR150R" />
+                            <ValidationMessage For="() => _createForm.Code" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Grup Tipe Motor <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_createForm.GrupTipeMotorId">
+                                <option value="">— Pilih grup —</option>
+                                @foreach (var g in _grupList.Where(g => g.IsActive))
+                                {
+                                    <option value="@g.Id">@g.Code</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _createForm.GrupTipeMotorId" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nama Singkat <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.ShortName" placeholder="cth. CBR 150R" />
+                            <ValidationMessage For="() => _createForm.ShortName" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Kode Produk <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.ProductCode" />
+                            <ValidationMessage For="() => _createForm.ProductCode" class="small text-danger" />
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label">Kode WMS <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="_createForm.WmsCode" />
+                                <ValidationMessage For="() => _createForm.WmsCode" class="small text-danger" />
+                            </div>
+                            <div class="col">
+                                <label class="form-label">Kode AHM <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="_createForm.AhmCode" />
+                                <ValidationMessage For="() => _createForm.AhmCode" class="small text-danger" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Format Nomor Mesin <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.EngineNumberFormat" placeholder="cth. KC15E######" />
+                            <ValidationMessage For="() => _createForm.EngineNumberFormat" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Format Nomor Rangka <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.ChassisNumberFormat" placeholder="cth. MH1KC1510####" />
+                            <ValidationMessage For="() => _createForm.ChassisNumberFormat" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Harga Nett (Rp) <span class="text-danger">*</span></label>
+                            <InputNumber class="form-control" @bind-Value="_createForm.NettPrice" />
+                            <ValidationMessage For="() => _createForm.NettPrice" class="small text-danger" />
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label">OR Jakarta</label>
+                                <InputNumber class="form-control" @bind-Value="_createForm.OrJakarta" />
+                            </div>
+                            <div class="col">
+                                <label class="form-label">OR Tangerang</label>
+                                <InputNumber class="form-control" @bind-Value="_createForm.OrTangerang" />
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label">BBN Jakarta</label>
+                                <InputNumber class="form-control" @bind-Value="_createForm.BbnJakarta" />
+                            </div>
+                            <div class="col">
+                                <label class="form-label">BBN Tangerang</label>
+                                <InputNumber class="form-control" @bind-Value="_createForm.BbnTangerang" />
+                            </div>
+                        </div>
+
+                        @* ── Warna Tersedia ── *@
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Warna Tersedia</label>
+                            @if (_warnaList.Count == 0)
+                            {
+                                <p class="small text-muted mb-0">Belum ada warna aktif.</p>
+                            }
+                            else
+                            {
+                                <div class="border rounded p-2" style="max-height:160px;overflow-y:auto;">
+                                    @foreach (var w in _warnaList.Where(w => w.IsActive))
+                                    {
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="create-warna-@w.Id"
+                                                   checked="@_createSelectedWarnaIds.Contains(w.Id)"
+                                                   @onchange="e => ToggleCreateWarna(w.Id, (bool)(e.Value ?? false))" />
+                                            <label class="form-check-label" for="create-warna-@w.Id">
+                                                @w.Code — @w.Name
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Tipe Motor
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-pencil me-1"></i> Ubah Tipe Motor</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_editForm" OnValidSubmit="HandleUpdate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Kode</label>
+                            <p class="form-control-plaintext fw-semibold">@_editForm.Code</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Grup Tipe Motor <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_editForm.GrupTipeMotorId">
+                                <option value="">— Pilih grup —</option>
+                                @foreach (var g in _grupList.Where(g => g.IsActive))
+                                {
+                                    <option value="@g.Id">@g.Code</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _editForm.GrupTipeMotorId" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nama Singkat <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.ShortName" />
+                            <ValidationMessage For="() => _editForm.ShortName" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Kode Produk <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.ProductCode" />
+                            <ValidationMessage For="() => _editForm.ProductCode" class="small text-danger" />
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label">Kode WMS <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="_editForm.WmsCode" />
+                                <ValidationMessage For="() => _editForm.WmsCode" class="small text-danger" />
+                            </div>
+                            <div class="col">
+                                <label class="form-label">Kode AHM <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="_editForm.AhmCode" />
+                                <ValidationMessage For="() => _editForm.AhmCode" class="small text-danger" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Format Nomor Mesin <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.EngineNumberFormat" />
+                            <ValidationMessage For="() => _editForm.EngineNumberFormat" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Format Nomor Rangka <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.ChassisNumberFormat" />
+                            <ValidationMessage For="() => _editForm.ChassisNumberFormat" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Harga Nett (Rp) <span class="text-danger">*</span></label>
+                            <InputNumber class="form-control" @bind-Value="_editForm.NettPrice" />
+                            <ValidationMessage For="() => _editForm.NettPrice" class="small text-danger" />
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label">OR Jakarta</label>
+                                <InputNumber class="form-control" @bind-Value="_editForm.OrJakarta" />
+                            </div>
+                            <div class="col">
+                                <label class="form-label">OR Tangerang</label>
+                                <InputNumber class="form-control" @bind-Value="_editForm.OrTangerang" />
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label">BBN Jakarta</label>
+                                <InputNumber class="form-control" @bind-Value="_editForm.BbnJakarta" />
+                            </div>
+                            <div class="col">
+                                <label class="form-label">BBN Tangerang</label>
+                                <InputNumber class="form-control" @bind-Value="_editForm.BbnTangerang" />
+                            </div>
+                        </div>
+
+                        @* ── Warna Tersedia ── *@
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Warna Tersedia</label>
+                            @if (_warnaList.Count == 0)
+                            {
+                                <p class="small text-muted mb-0">Belum ada warna aktif.</p>
+                            }
+                            else
+                            {
+                                <div class="border rounded p-2" style="max-height:160px;overflow-y:auto;">
+                                    @foreach (var w in _warnaList.Where(w => w.IsActive))
+                                    {
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="edit-warna-@w.Id"
+                                                   checked="@_editSelectedWarnaIds.Contains(w.Id)"
+                                                   @onchange="e => ToggleEditWarna(w.Id, (bool)(e.Value ?? false))" />
+                                            <label class="form-check-label" for="edit-warna-@w.Id">
+                                                @w.Code — @w.Name
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-grow-1" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-lg me-1"></i>
+                                }
+                                Simpan
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Batal</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Right: TipeMotor list ── *@
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Tipe Motor</div>
+            <div class="card-body p-0">
+                @if (_tipeMotorList is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_tipeMotorList.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada tipe motor yang terdaftar.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Kode</th>
+                                    <th>Grup</th>
+                                    <th>Nama Singkat</th>
+                                    <th class="text-end">Harga Nett</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _tipeMotorList)
+                                {
+                                    <tr class="@(_editingId == item.Id ? "table-warning" : "")">
+                                        <td class="fw-semibold">@item.Code</td>
+                                        <td class="small">@GrupCode(item.GrupTipeMotorId)</td>
+                                        <td>@item.ShortName</td>
+                                        <td class="text-end small">@item.NettPrice.ToString("N0")</td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Tidak Aktif</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <AuthorizeView Roles="Admin">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    <button class="btn btn-sm @(_editingId == item.Id ? "btn-warning" : "btn-outline-secondary")"
+                                                            title="Ubah" @onclick="() => StartEdit(item)">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    @if (item.IsActive)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                title="Nonaktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-on"></i>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-success"
+                                                                title="Aktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-off"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </AuthorizeView>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private List<TipeMotorDto>?    _tipeMotorList;
+    private List<GrupTipeMotorDto> _grupList  = [];
+    private List<WarnaDto>         _warnaList = [];
+
+    private Guid?   _editingId;
+    private string? _notice;
+    private bool    _saving;
+
+    private readonly List<string>  _errors                 = [];
+    private readonly HashSet<Guid> _createSelectedWarnaIds = [];
+    private          HashSet<Guid> _editSelectedWarnaIds   = [];
+
+    private TipeMotorCreateForm _createForm = new();
+    private TipeMotorEditForm   _editForm   = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var tipeTask  = Api.GetTipeMotorAsync();
+        var grupTask  = Api.GetGrupTipeMotorAsync();
+        var warnaTask = Api.GetWarnaAsync();
+        await Task.WhenAll(tipeTask, grupTask, warnaTask);
+        _tipeMotorList = tipeTask.Result  ?? [];
+        _grupList      = grupTask.Result  ?? [];
+        _warnaList     = warnaTask.Result ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _tipeMotorList = await Api.GetTipeMotorAsync() ?? [];
+
+    private string GrupCode(Guid grupId)
+    {
+        var g = _grupList.FirstOrDefault(x => x.Id == grupId);
+        return g?.Code ?? "—";
+    }
+
+    private void ToggleCreateWarna(Guid warnaId, bool isChecked)
+    {
+        if (isChecked) _createSelectedWarnaIds.Add(warnaId);
+        else           _createSelectedWarnaIds.Remove(warnaId);
+    }
+
+    private void ToggleEditWarna(Guid warnaId, bool isChecked)
+    {
+        if (isChecked) _editSelectedWarnaIds.Add(warnaId);
+        else           _editSelectedWarnaIds.Remove(warnaId);
+    }
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.CreateTipeMotorAsync(
+            _createForm.Code.Trim(),
+            _createForm.GrupTipeMotorId,
+            _createForm.ShortName.Trim(),
+            _createForm.ProductCode.Trim(),
+            _createForm.WmsCode.Trim(),
+            _createForm.AhmCode.Trim(),
+            _createForm.EngineNumberFormat.Trim(),
+            _createForm.ChassisNumberFormat.Trim(),
+            _createForm.NettPrice,
+            _createForm.OrJakarta,
+            _createForm.OrTangerang,
+            _createForm.BbnJakarta,
+            _createForm.BbnTangerang);
+
+        if (errors is not null)
+        {
+            _saving = false;
+            _errors.AddRange(errors);
+            return;
+        }
+
+        if (_createSelectedWarnaIds.Count > 0 && id is not null)
+        {
+            var colorErrors = await Api.SetTipeMotorColorsAsync(id.Value, [.. _createSelectedWarnaIds]);
+            if (colorErrors is not null)
+            {
+                _saving = false;
+                _errors.AddRange(colorErrors);
+                return;
+            }
+        }
+
+        _saving = false;
+        _notice = $"Tipe Motor '{_createForm.ShortName}' berhasil ditambahkan.";
+        _createForm = new();
+        _createSelectedWarnaIds.Clear();
+        await LoadAsync();
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (_editingId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var errors = await Api.UpdateTipeMotorAsync(
+            _editingId.Value,
+            _editForm.GrupTipeMotorId,
+            _editForm.ShortName.Trim(),
+            _editForm.ProductCode.Trim(),
+            _editForm.WmsCode.Trim(),
+            _editForm.AhmCode.Trim(),
+            _editForm.EngineNumberFormat.Trim(),
+            _editForm.ChassisNumberFormat.Trim(),
+            _editForm.NettPrice,
+            _editForm.OrJakarta,
+            _editForm.OrTangerang,
+            _editForm.BbnJakarta,
+            _editForm.BbnTangerang);
+
+        if (errors is not null)
+        {
+            _saving = false;
+            _errors.AddRange(errors);
+            return;
+        }
+
+        var colorErrors = await Api.SetTipeMotorColorsAsync(_editingId.Value, [.. _editSelectedWarnaIds]);
+        if (colorErrors is not null)
+        {
+            _saving = false;
+            _errors.AddRange(colorErrors);
+            return;
+        }
+
+        _saving    = false;
+        _notice    = "Tipe Motor berhasil diperbarui.";
+        _editingId = null;
+        _editForm  = new();
+        _editSelectedWarnaIds.Clear();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(TipeMotorDto item)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetTipeMotorStatusAsync(item.Id, !item.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Tipe Motor '{item.ShortName}' berhasil {(item.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    private void StartEdit(TipeMotorDto item)
+    {
+        _editingId                     = item.Id;
+        _editForm.Code                 = item.Code;
+        _editForm.GrupTipeMotorId      = item.GrupTipeMotorId;
+        _editForm.ShortName            = item.ShortName;
+        _editForm.ProductCode          = item.ProductCode;
+        _editForm.WmsCode              = item.WmsCode;
+        _editForm.AhmCode              = item.AhmCode;
+        _editForm.EngineNumberFormat   = item.EngineNumberFormat;
+        _editForm.ChassisNumberFormat  = item.ChassisNumberFormat;
+        _editForm.NettPrice            = item.NettPrice;
+        _editForm.OrJakarta            = item.OrJakarta;
+        _editForm.OrTangerang          = item.OrTangerang;
+        _editForm.BbnJakarta           = item.BbnJakarta;
+        _editForm.BbnTangerang         = item.BbnTangerang;
+        _editSelectedWarnaIds          = [.. item.WarnaIds];
+        _errors.Clear();
+        _notice = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _editForm  = new();
+        _editSelectedWarnaIds.Clear();
+        _errors.Clear();
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class TipeMotorCreateForm
+    {
+        [Required(ErrorMessage = "Kode wajib diisi.")]
+        [MaxLength(50, ErrorMessage = "Kode maksimal 50 karakter.")]
+        public string Code { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Grup tipe motor wajib dipilih.")]
+        public Guid GrupTipeMotorId { get; set; }
+
+        [Required(ErrorMessage = "Nama singkat wajib diisi.")]
+        [MaxLength(100, ErrorMessage = "Nama singkat maksimal 100 karakter.")]
+        public string ShortName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Kode produk wajib diisi.")]
+        [MaxLength(50)]
+        public string ProductCode { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Kode WMS wajib diisi.")]
+        [MaxLength(50)]
+        public string WmsCode { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Kode AHM wajib diisi.")]
+        [MaxLength(50)]
+        public string AhmCode { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Format nomor mesin wajib diisi.")]
+        [MaxLength(100)]
+        public string EngineNumberFormat { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Format nomor rangka wajib diisi.")]
+        [MaxLength(100)]
+        public string ChassisNumberFormat { get; set; } = string.Empty;
+
+        [Range(0, double.MaxValue, ErrorMessage = "Harga tidak boleh negatif.")]
+        public decimal NettPrice { get; set; }
+
+        public decimal OrJakarta   { get; set; }
+        public decimal OrTangerang { get; set; }
+        public decimal BbnJakarta  { get; set; }
+        public decimal BbnTangerang { get; set; }
+    }
+
+    private sealed class TipeMotorEditForm
+    {
+        public string Code { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Grup tipe motor wajib dipilih.")]
+        public Guid GrupTipeMotorId { get; set; }
+
+        [Required(ErrorMessage = "Nama singkat wajib diisi.")]
+        [MaxLength(100, ErrorMessage = "Nama singkat maksimal 100 karakter.")]
+        public string ShortName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Kode produk wajib diisi.")]
+        [MaxLength(50)]
+        public string ProductCode { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Kode WMS wajib diisi.")]
+        [MaxLength(50)]
+        public string WmsCode { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Kode AHM wajib diisi.")]
+        [MaxLength(50)]
+        public string AhmCode { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Format nomor mesin wajib diisi.")]
+        [MaxLength(100)]
+        public string EngineNumberFormat { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Format nomor rangka wajib diisi.")]
+        [MaxLength(100)]
+        public string ChassisNumberFormat { get; set; } = string.Empty;
+
+        [Range(0, double.MaxValue, ErrorMessage = "Harga tidak boleh negatif.")]
+        public decimal NettPrice { get; set; }
+
+        public decimal OrJakarta    { get; set; }
+        public decimal OrTangerang  { get; set; }
+        public decimal BbnJakarta   { get; set; }
+        public decimal BbnTangerang { get; set; }
+    }
+}

@@ -1,9 +1,13 @@
 using Cassandra.Domain.Common;
 using Cassandra.Domain.Dealers.Events;
+using Cassandra.Domain.GrupTipeMotor.Events;
 using Cassandra.Domain.Jabatan.Events;
 using Cassandra.Domain.Karyawan.Events;
+using Cassandra.Domain.Kelengkapan.Events;
 using Cassandra.Domain.Kios.Events;
 using Cassandra.Domain.Mediator.Events;
+using Cassandra.Domain.TipeMotor.Events;
+using Cassandra.Domain.Warna.Events;
 
 namespace Cassandra.Infrastructure.Persistence.EventStore;
 
@@ -44,6 +48,30 @@ public static class EventTypeRegistry
         [nameof(MediatorActivated)]   = typeof(MediatorActivated),
         [nameof(MediatorDeactivated)] = typeof(MediatorDeactivated),
         [nameof(MediatorLimitSet)]    = typeof(MediatorLimitSet),
+
+        // Warna (dealer-scoped) events
+        [nameof(WarnaCreated)]     = typeof(WarnaCreated),
+        [nameof(WarnaUpdated)]     = typeof(WarnaUpdated),
+        [nameof(WarnaActivated)]   = typeof(WarnaActivated),
+        [nameof(WarnaDeactivated)] = typeof(WarnaDeactivated),
+
+        // GrupTipeMotor (dealer-scoped) events
+        [nameof(GrupTipeMotorCreated)]     = typeof(GrupTipeMotorCreated),
+        [nameof(GrupTipeMotorActivated)]   = typeof(GrupTipeMotorActivated),
+        [nameof(GrupTipeMotorDeactivated)] = typeof(GrupTipeMotorDeactivated),
+
+        // TipeMotor (dealer-scoped) events
+        [nameof(TipeMotorCreated)]     = typeof(TipeMotorCreated),
+        [nameof(TipeMotorUpdated)]     = typeof(TipeMotorUpdated),
+        [nameof(TipeMotorActivated)]   = typeof(TipeMotorActivated),
+        [nameof(TipeMotorDeactivated)] = typeof(TipeMotorDeactivated),
+        [nameof(TipeMotorColorsSet)]   = typeof(TipeMotorColorsSet),
+
+        // Kelengkapan (dealer-scoped) events
+        [nameof(KelengkapanCreated)]     = typeof(KelengkapanCreated),
+        [nameof(KelengkapanUpdated)]     = typeof(KelengkapanUpdated),
+        [nameof(KelengkapanActivated)]   = typeof(KelengkapanActivated),
+        [nameof(KelengkapanDeactivated)] = typeof(KelengkapanDeactivated),
     };
 
     public static Type Resolve(string eventType) =>

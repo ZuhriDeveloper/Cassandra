@@ -182,6 +182,118 @@ public class MasterDataApiClient(HttpClient http)
         return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
     }
 
+    // ── Warna ─────────────────────────────────────────────────────────────────
+
+    public Task<List<WarnaDto>?> GetWarnaAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<WarnaDto>>("api/dealer/warna", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateWarnaAsync(string code, string name, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/warna", new { code, name }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateWarnaResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> UpdateWarnaAsync(Guid id, string name, CancellationToken ct = default)
+    {
+        var response = await http.PutAsJsonAsync($"api/dealer/warna/{id}", new { name }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetWarnaStatusAsync(Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/warna/{id}/status", new { isActive }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── GrupTipeMotor ─────────────────────────────────────────────────────────
+
+    public Task<List<GrupTipeMotorDto>?> GetGrupTipeMotorAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<GrupTipeMotorDto>>("api/dealer/grup-tipe-motor", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateGrupTipeMotorAsync(string code, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/grup-tipe-motor", new { code }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateGrupTipeMotorResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> SetGrupTipeMotorStatusAsync(Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/grup-tipe-motor/{id}/status", new { isActive }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── TipeMotor ─────────────────────────────────────────────────────────────
+
+    public Task<List<TipeMotorDto>?> GetTipeMotorAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<TipeMotorDto>>("api/dealer/tipe-motor", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateTipeMotorAsync(
+        string code, Guid grupTipeMotorId, string shortName, string productCode,
+        string wmsCode, string ahmCode, string engineNumberFormat, string chassisNumberFormat,
+        decimal nettPrice, decimal orJakarta, decimal orTangerang, decimal bbnJakarta, decimal bbnTangerang,
+        CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/tipe-motor",
+            new { code, grupTipeMotorId, shortName, productCode, wmsCode, ahmCode, engineNumberFormat,
+                  chassisNumberFormat, nettPrice, orJakarta, orTangerang, bbnJakarta, bbnTangerang }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateTipeMotorResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> UpdateTipeMotorAsync(
+        Guid id, Guid grupTipeMotorId, string shortName, string productCode,
+        string wmsCode, string ahmCode, string engineNumberFormat, string chassisNumberFormat,
+        decimal nettPrice, decimal orJakarta, decimal orTangerang, decimal bbnJakarta, decimal bbnTangerang,
+        CancellationToken ct = default)
+    {
+        var response = await http.PutAsJsonAsync($"api/dealer/tipe-motor/{id}",
+            new { grupTipeMotorId, shortName, productCode, wmsCode, ahmCode, engineNumberFormat,
+                  chassisNumberFormat, nettPrice, orJakarta, orTangerang, bbnJakarta, bbnTangerang }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetTipeMotorStatusAsync(Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/tipe-motor/{id}/status", new { isActive }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetTipeMotorColorsAsync(Guid id, List<Guid> warnaIds, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/tipe-motor/{id}/colors", new { warnaIds }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── Kelengkapan ───────────────────────────────────────────────────────────
+
+    public Task<List<KelengkapanDto>?> GetKelengkapanAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<KelengkapanDto>>("api/dealer/kelengkapan", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateKelengkapanAsync(string name, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/kelengkapan", new { name }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateKelengkapanResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> UpdateKelengkapanAsync(Guid id, string name, CancellationToken ct = default)
+    {
+        var response = await http.PutAsJsonAsync($"api/dealer/kelengkapan/{id}", new { name }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetKelengkapanStatusAsync(Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/kelengkapan/{id}/status", new { isActive }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static async Task<List<string>> ReadErrorsAsync(HttpResponseMessage r)
@@ -240,3 +352,31 @@ public record MediatorDto(
     decimal Limit,
     bool    IsActive);
 public record CreateMediatorResponse(Guid Id);
+
+public record WarnaDto(Guid Id, string Code, string Name, bool IsActive);
+public record CreateWarnaResponse(Guid Id);
+
+public record GrupTipeMotorDto(Guid Id, string Code, bool IsActive);
+public record CreateGrupTipeMotorResponse(Guid Id);
+
+public record TipeMotorDto(
+    Guid                Id,
+    string              Code,
+    Guid                GrupTipeMotorId,
+    string              ShortName,
+    string              ProductCode,
+    string              WmsCode,
+    string              AhmCode,
+    string              EngineNumberFormat,
+    string              ChassisNumberFormat,
+    decimal             NettPrice,
+    decimal             OrJakarta,
+    decimal             OrTangerang,
+    decimal             BbnJakarta,
+    decimal             BbnTangerang,
+    bool                IsActive,
+    IReadOnlyList<Guid> WarnaIds);
+public record CreateTipeMotorResponse(Guid Id);
+
+public record KelengkapanDto(Guid Id, string Name, bool IsActive);
+public record CreateKelengkapanResponse(Guid Id);
