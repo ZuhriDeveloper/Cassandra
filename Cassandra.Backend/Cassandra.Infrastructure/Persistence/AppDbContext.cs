@@ -24,6 +24,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
     public DbSet<TipeMotorWarnaReadModel> TipeMotorWarnaReadModels => Set<TipeMotorWarnaReadModel>();
     public DbSet<KelengkapanReadModel> KelengkapanReadModels => Set<KelengkapanReadModel>();
 
+    // Phase 3: Leasing & Financing master data
+    public DbSet<MetodeKeuanganReadModel> MetodeKeuanganReadModels => Set<MetodeKeuanganReadModel>();
+    public DbSet<GlobalLeasingReadModel> GlobalLeasingReadModels => Set<GlobalLeasingReadModel>();
+    public DbSet<CabangLeasingReadModel> CabangLeasingReadModels => Set<CabangLeasingReadModel>();
+    public DbSet<GrupTenorReadModel> GrupTenorReadModels => Set<GrupTenorReadModel>();
+    public DbSet<TenorReadModel> TenorReadModels => Set<TenorReadModel>();
+    public DbSet<DfReadModel> DfReadModels => Set<DfReadModel>();
+    public DbSet<DaftarHargaLeasingReadModel> DaftarHargaLeasingReadModels => Set<DaftarHargaLeasingReadModel>();
+    public DbSet<DaftarHargaLeasingItemReadModel> DaftarHargaLeasingItemReadModels => Set<DaftarHargaLeasingItemReadModel>();
+    public DbSet<DiscountReadModel> DiscountReadModels => Set<DiscountReadModel>();
+    public DbSet<DiscountItemReadModel> DiscountItemReadModels => Set<DiscountItemReadModel>();
+    public DbSet<DiscountCashReadModel> DiscountCashReadModels => Set<DiscountCashReadModel>();
+    public DbSet<AlokasiDiskonReadModel> AlokasiDiskonReadModels => Set<AlokasiDiskonReadModel>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -159,6 +173,137 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
             e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
             e.Property(x => x.UpdatedBy).HasMaxLength(100);
             e.HasIndex(x => new { x.DealerId, x.Name }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        // ── Phase 3: Leasing & Financing ───────────────────────────────────────
+
+        builder.Entity<MetodeKeuanganReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Code }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<GlobalLeasingReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Phone).HasMaxLength(30).IsRequired();
+            e.Property(x => x.Fax).HasMaxLength(30);
+            e.Property(x => x.Contact).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Code }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<CabangLeasingReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Phone).HasMaxLength(30);
+            e.Property(x => x.Fax).HasMaxLength(30);
+            e.Property(x => x.Contact).HasMaxLength(100);
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Code }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<GrupTenorReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Code }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<TenorReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Code }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<DfReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Discount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Interest).HasColumnType("numeric(18,2)");
+            e.Property(x => x.UpdatedBy).HasMaxLength(100).IsRequired();
+            e.HasIndex(x => x.DealerId).IsUnique();
+            // No query filter — unique by DealerId, queried manually by DealerId
+        });
+
+        builder.Entity<DaftarHargaLeasingReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Name, x.GlobalLeasingId, x.GrupTenorId }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<DaftarHargaLeasingItemReadModel>(e =>
+        {
+            e.HasKey(x => new { x.DaftarHargaLeasingId, x.GrupTipeMotorId });
+            e.Property(x => x.Subsidi).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Incentive).HasColumnType("numeric(18,2)");
+            e.Property(x => x.LainLain).HasColumnType("numeric(18,2)");
+            // No query filter — accessed via parent DaftarHargaLeasing
+        });
+
+        builder.Entity<DiscountReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Level).HasMaxLength(20).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.DaftarHargaLeasingId, x.Level }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<DiscountItemReadModel>(e =>
+        {
+            e.HasKey(x => new { x.DiscountId, x.GrupTipeMotorId });
+            e.Property(x => x.Amount).HasColumnType("numeric(18,2)");
+            // No query filter — accessed via parent Discount
+        });
+
+        builder.Entity<DiscountCashReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.DirectDiscount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.ChannelDiscount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.TipeMotorId }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<AlokasiDiskonReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.DiscountLevel).HasMaxLength(20).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.KaryawanId }).IsUnique();
             e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
         });
     }

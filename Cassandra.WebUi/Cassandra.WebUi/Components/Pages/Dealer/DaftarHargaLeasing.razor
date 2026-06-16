@@ -1,0 +1,509 @@
+@page "/dealer/daftar-harga-leasing"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Daftar Harga Leasing — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Daftar Harga Leasing</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+@* ── Top section: Header form + Header table ── *@
+<div class="row g-4">
+
+    @* ── Left: Create / Edit form ── *@
+    <div class="col-lg-5">
+        @if (_editingId is null)
+        {
+            <div class="card">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Daftar Harga Leasing Baru
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Nama Daftar <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.Name" placeholder="cth. ACC Reguler 2025" />
+                            <ValidationMessage For="() => _createForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Global Leasing <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_createForm.GlobalLeasingId">
+                                <option value="">— Pilih —</option>
+                                @foreach (var g in _globalLeasingList.Where(g => g.IsActive))
+                                {
+                                    <option value="@g.Id">@g.Code — @g.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _createForm.GlobalLeasingId" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Grup Tenor <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_createForm.GrupTenorId">
+                                <option value="">— Pilih —</option>
+                                @foreach (var g in _grupTenorList.Where(g => g.IsActive))
+                                {
+                                    <option value="@g.Id">@g.Code — @g.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _createForm.GrupTenorId" class="small text-danger" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Daftar Harga Leasing
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-pencil me-1"></i> Ubah Daftar Harga Leasing</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_editForm" OnValidSubmit="HandleUpdate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Nama Daftar <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.Name" />
+                            <ValidationMessage For="() => _editForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Global Leasing <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_editForm.GlobalLeasingId">
+                                <option value="">— Pilih —</option>
+                                @foreach (var g in _globalLeasingList.Where(g => g.IsActive))
+                                {
+                                    <option value="@g.Id">@g.Code — @g.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _editForm.GlobalLeasingId" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Grup Tenor <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_editForm.GrupTenorId">
+                                <option value="">— Pilih —</option>
+                                @foreach (var g in _grupTenorList.Where(g => g.IsActive))
+                                {
+                                    <option value="@g.Id">@g.Code — @g.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _editForm.GrupTenorId" class="small text-danger" />
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-grow-1" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-lg me-1"></i>
+                                }
+                                Simpan
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Batal</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Right: list ── *@
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Daftar Harga Leasing</div>
+            <div class="card-body p-0">
+                @if (_list is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_list.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada daftar harga leasing yang terdaftar.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nama</th>
+                                    <th>Leasing</th>
+                                    <th>Tenor</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _list)
+                                {
+                                    <tr class="@(_editingId == item.Id ? "table-warning" : "") @(_itemsEditingId == item.Id ? "table-info" : "")">
+                                        <td>@item.Name</td>
+                                        <td class="small">@GlobalLeasingCode(item.GlobalLeasingId)</td>
+                                        <td class="small">@GrupTenorCode(item.GrupTenorId)</td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Tidak Aktif</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <AuthorizeView Roles="Admin">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    <button class="btn btn-sm @(_editingId == item.Id ? "btn-warning" : "btn-outline-secondary")"
+                                                            title="Ubah Header" @onclick="() => StartEdit(item)">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm @(_itemsEditingId == item.Id ? "btn-info" : "btn-outline-info")"
+                                                            title="Edit Items" @onclick="() => StartEditItems(item)">
+                                                        <i class="bi bi-table"></i>
+                                                    </button>
+                                                    @if (item.IsActive)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                title="Nonaktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-on"></i>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-success"
+                                                                title="Aktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-off"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </AuthorizeView>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@* ── Items editing section ── *@
+@if (_itemsEditingId is not null && _itemRows.Count > 0)
+{
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header fw-semibold text-info-emphasis bg-info-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-table me-1"></i> Edit Items — @(_list?.FirstOrDefault(x => x.Id == _itemsEditingId)?.Name ?? "")</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEditItems">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Grup Tipe Motor</th>
+                                    <th class="text-end">Subsidi</th>
+                                    <th class="text-end">Incentive</th>
+                                    <th class="text-end">Lain-lain</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in _itemRows)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@row.GrupCode</td>
+                                        <td class="text-end" style="width:140px">
+                                            <InputNumber class="form-control form-control-sm text-end" @bind-Value="row.Subsidi" />
+                                        </td>
+                                        <td class="text-end" style="width:140px">
+                                            <InputNumber class="form-control form-control-sm text-end" @bind-Value="row.Incentive" />
+                                        </td>
+                                        <td class="text-end" style="width:140px">
+                                            <InputNumber class="form-control form-control-sm text-end" @bind-Value="row.LainLain" />
+                                        </td>
+                                        <td class="text-end fw-semibold">@row.Total.ToString("N0")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-3 border-top">
+                        <button class="btn btn-info" @onclick="HandleSaveItems" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Items
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<DaftarHargaLeasingDto>? _list;
+    private List<GlobalLeasingDto>       _globalLeasingList = [];
+    private List<GrupTenorDto>           _grupTenorList     = [];
+    private List<GrupTipeMotorDto>       _grupTipeMotorList = [];
+
+    private Guid?   _editingId;
+    private Guid?   _itemsEditingId;
+    private string? _notice;
+    private bool    _saving;
+
+    private readonly List<string>  _errors   = [];
+    private readonly List<DhlItemRow> _itemRows = [];
+
+    private DhlCreateForm _createForm = new();
+    private DhlEditForm   _editForm   = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var dhlTask    = Api.GetDaftarHargaLeasingAsync();
+        var globalTask = Api.GetGlobalLeasingAsync();
+        var tenorTask  = Api.GetGrupTenorAsync();
+        var grupTask   = Api.GetGrupTipeMotorAsync();
+        await Task.WhenAll(dhlTask, globalTask, tenorTask, grupTask);
+        _list              = dhlTask.Result    ?? [];
+        _globalLeasingList = globalTask.Result ?? [];
+        _grupTenorList     = tenorTask.Result  ?? [];
+        _grupTipeMotorList = grupTask.Result   ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _list = await Api.GetDaftarHargaLeasingAsync() ?? [];
+
+    private string GlobalLeasingCode(Guid id)
+    {
+        var g = _globalLeasingList.FirstOrDefault(x => x.Id == id);
+        return g?.Code ?? "—";
+    }
+
+    private string GrupTenorCode(Guid id)
+    {
+        var g = _grupTenorList.FirstOrDefault(x => x.Id == id);
+        return g?.Code ?? "—";
+    }
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.CreateDaftarHargaLeasingAsync(
+            _createForm.GlobalLeasingId,
+            _createForm.GrupTenorId,
+            _createForm.Name.Trim());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = $"Daftar Harga Leasing '{_createForm.Name}' berhasil ditambahkan.";
+        _createForm = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (_editingId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var errors = await Api.UpdateDaftarHargaLeasingAsync(
+            _editingId.Value,
+            _editForm.GlobalLeasingId,
+            _editForm.GrupTenorId,
+            _editForm.Name.Trim());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice    = "Daftar Harga Leasing berhasil diperbarui.";
+        _editingId = null;
+        _editForm  = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(DaftarHargaLeasingDto item)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetDaftarHargaLeasingStatusAsync(item.Id, !item.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Daftar Harga Leasing '{item.Name}' berhasil {(item.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    private async Task HandleSaveItems()
+    {
+        if (_itemsEditingId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var items = _itemRows
+            .Select(r => (r.GrupTipeMotorId, r.Subsidi, r.Incentive, r.LainLain))
+            .ToList();
+
+        var errors = await Api.SetDaftarHargaLeasingItemsAsync(_itemsEditingId.Value, items);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = "Items berhasil disimpan.";
+        await LoadAsync();
+    }
+
+    private void StartEdit(DaftarHargaLeasingDto item)
+    {
+        _editingId              = item.Id;
+        _editForm.Name          = item.Name;
+        _editForm.GlobalLeasingId = item.GlobalLeasingId;
+        _editForm.GrupTenorId   = item.GrupTenorId;
+        _itemsEditingId         = null;
+        _itemRows.Clear();
+        _errors.Clear();
+        _notice = null;
+    }
+
+    private void StartEditItems(DaftarHargaLeasingDto item)
+    {
+        _itemsEditingId = item.Id;
+        _editingId      = null;
+        _editForm       = new();
+        _errors.Clear();
+        _notice = null;
+
+        _itemRows.Clear();
+        foreach (var g in _grupTipeMotorList.Where(g => g.IsActive))
+        {
+            var existing = item.Items.FirstOrDefault(x => x.GrupTipeMotorId == g.Id);
+            _itemRows.Add(new DhlItemRow
+            {
+                GrupTipeMotorId = g.Id,
+                GrupCode        = g.Code,
+                Subsidi         = existing?.Subsidi   ?? 0,
+                Incentive       = existing?.Incentive ?? 0,
+                LainLain        = existing?.LainLain  ?? 0
+            });
+        }
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _editForm  = new();
+        _errors.Clear();
+    }
+
+    private void CancelEditItems()
+    {
+        _itemsEditingId = null;
+        _itemRows.Clear();
+        _errors.Clear();
+    }
+
+    // ── Row model ──────────────────────────────────────────────────────────────
+
+    private sealed class DhlItemRow
+    {
+        public Guid    GrupTipeMotorId { get; set; }
+        public string  GrupCode        { get; set; } = "";
+        public decimal Subsidi         { get; set; }
+        public decimal Incentive       { get; set; }
+        public decimal LainLain        { get; set; }
+        public decimal Total           => Subsidi + Incentive + LainLain;
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class DhlCreateForm
+    {
+        [Required(ErrorMessage = "Nama Daftar wajib diisi.")]
+        [MaxLength(200, ErrorMessage = "Nama maksimal 200 karakter.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Global Leasing wajib dipilih.")]
+        public Guid GlobalLeasingId { get; set; }
+
+        [Required(ErrorMessage = "Grup Tenor wajib dipilih.")]
+        public Guid GrupTenorId { get; set; }
+    }
+
+    private sealed class DhlEditForm
+    {
+        [Required(ErrorMessage = "Nama Daftar wajib diisi.")]
+        [MaxLength(200, ErrorMessage = "Nama maksimal 200 karakter.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Global Leasing wajib dipilih.")]
+        public Guid GlobalLeasingId { get; set; }
+
+        [Required(ErrorMessage = "Grup Tenor wajib dipilih.")]
+        public Guid GrupTenorId { get; set; }
+    }
+}

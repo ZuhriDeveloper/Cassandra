@@ -1,0 +1,319 @@
+@page "/dealer/alokasi-diskon"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Alokasi Diskon — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Alokasi Diskon</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    @* ── Left: Create / Edit form ── *@
+    <div class="col-lg-4">
+        @if (_editingId is null)
+        {
+            <div class="card">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Alokasi Diskon Baru
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Karyawan <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_createForm.KaryawanId">
+                                <option value="">— Pilih —</option>
+                                @foreach (var k in _karyawanList.Where(k => k.IsActive))
+                                {
+                                    <option value="@k.Id">@k.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _createForm.KaryawanId" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Level Diskon <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.DiscountLevel" placeholder="cth. A" />
+                            <ValidationMessage For="() => _createForm.DiscountLevel" class="small text-danger" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Alokasi Diskon
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-pencil me-1"></i> Ubah Alokasi Diskon</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_editForm" OnValidSubmit="HandleUpdate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Karyawan</label>
+                            <p class="form-control-plaintext fw-semibold">@_editForm.KaryawanName</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Level Diskon <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.DiscountLevel" />
+                            <ValidationMessage For="() => _editForm.DiscountLevel" class="small text-danger" />
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-grow-1" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-lg me-1"></i>
+                                }
+                                Simpan
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Batal</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Right: list ── *@
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Alokasi Diskon</div>
+            <div class="card-body p-0">
+                @if (_list is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_list.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada alokasi diskon yang terdaftar.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Karyawan</th>
+                                    <th>Level Diskon</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _list)
+                                {
+                                    <tr class="@(_editingId == item.Id ? "table-warning" : "")">
+                                        <td>@KaryawanName(item.KaryawanId)</td>
+                                        <td class="fw-semibold">@item.DiscountLevel</td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Tidak Aktif</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <AuthorizeView Roles="Admin">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    <button class="btn btn-sm @(_editingId == item.Id ? "btn-warning" : "btn-outline-secondary")"
+                                                            title="Ubah" @onclick="() => StartEdit(item)">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    @if (item.IsActive)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                title="Nonaktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-on"></i>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-success"
+                                                                title="Aktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-off"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </AuthorizeView>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private List<AlokasiDiskonDto>? _list;
+    private List<KaryawanDto>       _karyawanList = [];
+    private Guid?   _editingId;
+    private string? _notice;
+    private bool    _saving;
+
+    private readonly List<string> _errors = [];
+
+    private AlokasiDiskonCreateForm _createForm = new();
+    private AlokasiDiskonEditForm   _editForm   = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var alokasiTask  = Api.GetAlokasiDiskonAsync();
+        var karyawanTask = Api.GetKaryawanAsync();
+        await Task.WhenAll(alokasiTask, karyawanTask);
+        _list         = alokasiTask.Result  ?? [];
+        _karyawanList = karyawanTask.Result ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _list = await Api.GetAlokasiDiskonAsync() ?? [];
+
+    private string KaryawanName(Guid id)
+    {
+        var k = _karyawanList.FirstOrDefault(x => x.Id == id);
+        return k?.Name ?? "—";
+    }
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.CreateAlokasiDiskonAsync(
+            _createForm.KaryawanId,
+            _createForm.DiscountLevel.Trim());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = $"Alokasi Diskon berhasil ditambahkan.";
+        _createForm = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (_editingId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var errors = await Api.UpdateAlokasiDiskonAsync(
+            _editingId.Value,
+            _editForm.DiscountLevel.Trim());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice    = "Alokasi Diskon berhasil diperbarui.";
+        _editingId = null;
+        _editForm  = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(AlokasiDiskonDto item)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetAlokasiDiskonStatusAsync(item.Id, !item.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Alokasi Diskon berhasil {(item.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    private void StartEdit(AlokasiDiskonDto item)
+    {
+        _editingId               = item.Id;
+        _editForm.KaryawanName   = KaryawanName(item.KaryawanId);
+        _editForm.DiscountLevel  = item.DiscountLevel;
+        _errors.Clear();
+        _notice = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _editForm  = new();
+        _errors.Clear();
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class AlokasiDiskonCreateForm
+    {
+        [Required(ErrorMessage = "Karyawan wajib dipilih.")]
+        public Guid KaryawanId { get; set; }
+
+        [Required(ErrorMessage = "Level Diskon wajib diisi.")]
+        [MaxLength(10, ErrorMessage = "Level Diskon maksimal 10 karakter.")]
+        public string DiscountLevel { get; set; } = string.Empty;
+    }
+
+    private sealed class AlokasiDiskonEditForm
+    {
+        public string KaryawanName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Level Diskon wajib diisi.")]
+        [MaxLength(10, ErrorMessage = "Level Diskon maksimal 10 karakter.")]
+        public string DiscountLevel { get; set; } = string.Empty;
+    }
+}

@@ -1,0 +1,387 @@
+@page "/dealer/global-leasing"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Global Leasing — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Global Leasing</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    @* ── Left: Create / Edit form ── *@
+    <div class="col-lg-4">
+        @if (_editingId is null)
+        {
+            <div class="card">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Global Leasing Baru
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Kode <span class="text-danger">*</span></label>
+                            <InputText class="form-control text-uppercase" @bind-Value="_createForm.Code"
+                                       @oninput="e => _createForm.Code = e.Value?.ToString()?.ToUpperInvariant() ?? string.Empty"
+                                       placeholder="cth. ACC" />
+                            <ValidationMessage For="() => _createForm.Code" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nama <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.Name" placeholder="cth. Astra Credit Companies" />
+                            <ValidationMessage For="() => _createForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Telepon <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.Phone" placeholder="cth. 02112345678" />
+                            <ValidationMessage For="() => _createForm.Phone" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Fax</label>
+                            <InputText class="form-control" @bind-Value="_createForm.Fax" placeholder="Opsional" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Contact <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.Contact" placeholder="cth. Budi" />
+                            <ValidationMessage For="() => _createForm.Contact" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Alamat <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.Address" placeholder="cth. Jl. Sudirman No. 1" />
+                            <ValidationMessage For="() => _createForm.Address" class="small text-danger" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Global Leasing
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-pencil me-1"></i> Ubah Global Leasing</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_editForm" OnValidSubmit="HandleUpdate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Kode</label>
+                            <p class="form-control-plaintext fw-semibold">@_editForm.Code</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nama <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.Name" />
+                            <ValidationMessage For="() => _editForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Telepon <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.Phone" />
+                            <ValidationMessage For="() => _editForm.Phone" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Fax</label>
+                            <InputText class="form-control" @bind-Value="_editForm.Fax" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Contact <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.Contact" />
+                            <ValidationMessage For="() => _editForm.Contact" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Alamat <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.Address" />
+                            <ValidationMessage For="() => _editForm.Address" class="small text-danger" />
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-grow-1" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-lg me-1"></i>
+                                }
+                                Simpan
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Batal</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Right: list ── *@
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Global Leasing</div>
+            <div class="card-body p-0">
+                @if (_list is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_list.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada global leasing yang terdaftar.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Kode</th>
+                                    <th>Nama</th>
+                                    <th>Telepon</th>
+                                    <th>Contact</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _list)
+                                {
+                                    <tr class="@(_editingId == item.Id ? "table-warning" : "")">
+                                        <td class="fw-semibold">@item.Code</td>
+                                        <td>@item.Name</td>
+                                        <td class="small">@item.Phone</td>
+                                        <td class="small">@item.Contact</td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Tidak Aktif</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <AuthorizeView Roles="Admin">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    <button class="btn btn-sm @(_editingId == item.Id ? "btn-warning" : "btn-outline-secondary")"
+                                                            title="Ubah" @onclick="() => StartEdit(item)">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    @if (item.IsActive)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                title="Nonaktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-on"></i>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-success"
+                                                                title="Aktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-off"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </AuthorizeView>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private List<GlobalLeasingDto>? _list;
+    private Guid?   _editingId;
+    private string? _notice;
+    private bool    _saving;
+
+    private readonly List<string> _errors = [];
+
+    private GlobalLeasingCreateForm _createForm = new();
+    private GlobalLeasingEditForm   _editForm   = new();
+
+    protected override async Task OnInitializedAsync()
+        => _list = await Api.GetGlobalLeasingAsync() ?? [];
+
+    private async Task LoadAsync()
+        => _list = await Api.GetGlobalLeasingAsync() ?? [];
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.CreateGlobalLeasingAsync(
+            _createForm.Code.Trim(),
+            _createForm.Name.Trim(),
+            _createForm.Phone.Trim(),
+            string.IsNullOrWhiteSpace(_createForm.Fax) ? null : _createForm.Fax.Trim(),
+            _createForm.Contact.Trim(),
+            _createForm.Address.Trim());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = $"Global Leasing '{_createForm.Name}' berhasil ditambahkan.";
+        _createForm = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (_editingId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var errors = await Api.UpdateGlobalLeasingAsync(
+            _editingId.Value,
+            _editForm.Name.Trim(),
+            _editForm.Phone.Trim(),
+            string.IsNullOrWhiteSpace(_editForm.Fax) ? null : _editForm.Fax.Trim(),
+            _editForm.Contact.Trim(),
+            _editForm.Address.Trim());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice    = "Global Leasing berhasil diperbarui.";
+        _editingId = null;
+        _editForm  = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(GlobalLeasingDto item)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetGlobalLeasingStatusAsync(item.Id, !item.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Global Leasing '{item.Name}' berhasil {(item.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    private void StartEdit(GlobalLeasingDto item)
+    {
+        _editingId        = item.Id;
+        _editForm.Code    = item.Code;
+        _editForm.Name    = item.Name;
+        _editForm.Phone   = item.Phone;
+        _editForm.Fax     = item.Fax;
+        _editForm.Contact = item.Contact;
+        _editForm.Address = item.Address;
+        _errors.Clear();
+        _notice = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _editForm  = new();
+        _errors.Clear();
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class GlobalLeasingCreateForm
+    {
+        [Required(ErrorMessage = "Kode wajib diisi.")]
+        [MaxLength(20, ErrorMessage = "Kode maksimal 20 karakter.")]
+        public string Code { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Nama wajib diisi.")]
+        [MaxLength(200, ErrorMessage = "Nama maksimal 200 karakter.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Telepon wajib diisi.")]
+        [MaxLength(30, ErrorMessage = "Telepon maksimal 30 karakter.")]
+        public string Phone { get; set; } = string.Empty;
+
+        [MaxLength(30, ErrorMessage = "Fax maksimal 30 karakter.")]
+        public string? Fax { get; set; }
+
+        [Required(ErrorMessage = "Contact wajib diisi.")]
+        [MaxLength(100, ErrorMessage = "Contact maksimal 100 karakter.")]
+        public string Contact { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Alamat wajib diisi.")]
+        [MaxLength(300, ErrorMessage = "Alamat maksimal 300 karakter.")]
+        public string Address { get; set; } = string.Empty;
+    }
+
+    private sealed class GlobalLeasingEditForm
+    {
+        public string Code { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Nama wajib diisi.")]
+        [MaxLength(200, ErrorMessage = "Nama maksimal 200 karakter.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Telepon wajib diisi.")]
+        [MaxLength(30, ErrorMessage = "Telepon maksimal 30 karakter.")]
+        public string Phone { get; set; } = string.Empty;
+
+        [MaxLength(30, ErrorMessage = "Fax maksimal 30 karakter.")]
+        public string? Fax { get; set; }
+
+        [Required(ErrorMessage = "Contact wajib diisi.")]
+        [MaxLength(100, ErrorMessage = "Contact maksimal 100 karakter.")]
+        public string Contact { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Alamat wajib diisi.")]
+        [MaxLength(300, ErrorMessage = "Alamat maksimal 300 karakter.")]
+        public string Address { get; set; } = string.Empty;
+    }
+}

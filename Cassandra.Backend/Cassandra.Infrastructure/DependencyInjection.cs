@@ -98,6 +98,46 @@ public static class DependencyInjection
         services.AddScoped<Application.Contracts.Kelengkapan.IKelengkapanRepository, Kelengkapan.KelengkapanRepository>();
         services.AddScoped<Application.Contracts.Kelengkapan.IKelengkapanQueryRepository, Kelengkapan.KelengkapanQueryRepository>();
 
+        // ── MetodeKeuangan ────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.MetodeKeuangan.IMetodeKeuanganRepository, MetodeKeuangan.MetodeKeuanganRepository>();
+        services.AddScoped<Application.Contracts.MetodeKeuangan.IMetodeKeuanganQueryRepository, MetodeKeuangan.MetodeKeuanganQueryRepository>();
+
+        // ── GlobalLeasing ─────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.GlobalLeasing.IGlobalLeasingRepository, GlobalLeasing.GlobalLeasingRepository>();
+        services.AddScoped<Application.Contracts.GlobalLeasing.IGlobalLeasingQueryRepository, GlobalLeasing.GlobalLeasingQueryRepository>();
+
+        // ── CabangLeasing ─────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.CabangLeasing.ICabangLeasingRepository, CabangLeasing.CabangLeasingRepository>();
+        services.AddScoped<Application.Contracts.CabangLeasing.ICabangLeasingQueryRepository, CabangLeasing.CabangLeasingQueryRepository>();
+
+        // ── GrupTenor ─────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.GrupTenor.IGrupTenorRepository, GrupTenor.GrupTenorRepository>();
+        services.AddScoped<Application.Contracts.GrupTenor.IGrupTenorQueryRepository, GrupTenor.GrupTenorQueryRepository>();
+
+        // ── Tenor ─────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Tenor.ITenorRepository, Tenor.TenorRepository>();
+        services.AddScoped<Application.Contracts.Tenor.ITenorQueryRepository, Tenor.TenorQueryRepository>();
+
+        // ── Df ────────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Df.IDfRepository, Df.DfRepository>();
+        services.AddScoped<Application.Contracts.Df.IDfQueryRepository, Df.DfQueryRepository>();
+
+        // ── DaftarHargaLeasing ────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.DaftarHargaLeasing.IDaftarHargaLeasingRepository, DaftarHargaLeasing.DaftarHargaLeasingRepository>();
+        services.AddScoped<Application.Contracts.DaftarHargaLeasing.IDaftarHargaLeasingQueryRepository, DaftarHargaLeasing.DaftarHargaLeasingQueryRepository>();
+
+        // ── Discount ──────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Discount.IDiscountRepository, Discount.DiscountRepository>();
+        services.AddScoped<Application.Contracts.Discount.IDiscountQueryRepository, Discount.DiscountQueryRepository>();
+
+        // ── DiscountCash ──────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.DiscountCash.IDiscountCashRepository, DiscountCash.DiscountCashRepository>();
+        services.AddScoped<Application.Contracts.DiscountCash.IDiscountCashQueryRepository, DiscountCash.DiscountCashQueryRepository>();
+
+        // ── AlokasiDiskon ─────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.AlokasiDiskon.IAlokasiDiskonRepository, AlokasiDiskon.AlokasiDiskonRepository>();
+        services.AddScoped<Application.Contracts.AlokasiDiskon.IAlokasiDiskonQueryRepository, AlokasiDiskon.AlokasiDiskonQueryRepository>();
+
         return services;
     }
 }

@@ -1,11 +1,21 @@
+using Cassandra.Domain.AlokasiDiskon.Events;
+using Cassandra.Domain.CabangLeasing.Events;
 using Cassandra.Domain.Common;
+using Cassandra.Domain.DaftarHargaLeasing.Events;
 using Cassandra.Domain.Dealers.Events;
+using Cassandra.Domain.Df.Events;
+using Cassandra.Domain.Discount.Events;
+using Cassandra.Domain.DiscountCash.Events;
+using Cassandra.Domain.GlobalLeasing.Events;
+using Cassandra.Domain.GrupTenor.Events;
 using Cassandra.Domain.GrupTipeMotor.Events;
 using Cassandra.Domain.Jabatan.Events;
 using Cassandra.Domain.Karyawan.Events;
 using Cassandra.Domain.Kelengkapan.Events;
 using Cassandra.Domain.Kios.Events;
 using Cassandra.Domain.Mediator.Events;
+using Cassandra.Domain.MetodeKeuangan.Events;
+using Cassandra.Domain.Tenor.Events;
 using Cassandra.Domain.TipeMotor.Events;
 using Cassandra.Domain.Warna.Events;
 
@@ -72,6 +82,65 @@ public static class EventTypeRegistry
         [nameof(KelengkapanUpdated)]     = typeof(KelengkapanUpdated),
         [nameof(KelengkapanActivated)]   = typeof(KelengkapanActivated),
         [nameof(KelengkapanDeactivated)] = typeof(KelengkapanDeactivated),
+
+        // MetodeKeuangan (dealer-scoped) events
+        [nameof(MetodeKeuanganCreated)]     = typeof(MetodeKeuanganCreated),
+        [nameof(MetodeKeuanganUpdated)]     = typeof(MetodeKeuanganUpdated),
+        [nameof(MetodeKeuanganActivated)]   = typeof(MetodeKeuanganActivated),
+        [nameof(MetodeKeuanganDeactivated)] = typeof(MetodeKeuanganDeactivated),
+
+        // GlobalLeasing (dealer-scoped) events
+        [nameof(GlobalLeasingCreated)]     = typeof(GlobalLeasingCreated),
+        [nameof(GlobalLeasingUpdated)]     = typeof(GlobalLeasingUpdated),
+        [nameof(GlobalLeasingActivated)]   = typeof(GlobalLeasingActivated),
+        [nameof(GlobalLeasingDeactivated)] = typeof(GlobalLeasingDeactivated),
+
+        // CabangLeasing (dealer-scoped) events
+        [nameof(CabangLeasingCreated)]     = typeof(CabangLeasingCreated),
+        [nameof(CabangLeasingUpdated)]     = typeof(CabangLeasingUpdated),
+        [nameof(CabangLeasingActivated)]   = typeof(CabangLeasingActivated),
+        [nameof(CabangLeasingDeactivated)] = typeof(CabangLeasingDeactivated),
+
+        // GrupTenor (dealer-scoped) events
+        [nameof(GrupTenorCreated)]     = typeof(GrupTenorCreated),
+        [nameof(GrupTenorUpdated)]     = typeof(GrupTenorUpdated),
+        [nameof(GrupTenorActivated)]   = typeof(GrupTenorActivated),
+        [nameof(GrupTenorDeactivated)] = typeof(GrupTenorDeactivated),
+
+        // Tenor (dealer-scoped) events
+        [nameof(TenorCreated)]     = typeof(TenorCreated),
+        [nameof(TenorUpdated)]     = typeof(TenorUpdated),
+        [nameof(TenorActivated)]   = typeof(TenorActivated),
+        [nameof(TenorDeactivated)] = typeof(TenorDeactivated),
+
+        // Df (dealer-singleton) events
+        [nameof(DfSet)] = typeof(DfSet),
+
+        // DaftarHargaLeasing (dealer-scoped) events
+        [nameof(DaftarHargaLeasingCreated)]      = typeof(DaftarHargaLeasingCreated),
+        [nameof(DaftarHargaLeasingUpdated)]      = typeof(DaftarHargaLeasingUpdated),
+        [nameof(DaftarHargaLeasingActivated)]    = typeof(DaftarHargaLeasingActivated),
+        [nameof(DaftarHargaLeasingDeactivated)]  = typeof(DaftarHargaLeasingDeactivated),
+        [nameof(DaftarHargaLeasingItemsSet)]     = typeof(DaftarHargaLeasingItemsSet),
+
+        // Discount (dealer-scoped) events
+        [nameof(DiscountCreated)]      = typeof(DiscountCreated),
+        [nameof(DiscountUpdated)]      = typeof(DiscountUpdated),
+        [nameof(DiscountActivated)]    = typeof(DiscountActivated),
+        [nameof(DiscountDeactivated)]  = typeof(DiscountDeactivated),
+        [nameof(DiscountItemsSet)]     = typeof(DiscountItemsSet),
+
+        // DiscountCash (dealer-scoped) events
+        [nameof(DiscountCashCreated)]     = typeof(DiscountCashCreated),
+        [nameof(DiscountCashUpdated)]     = typeof(DiscountCashUpdated),
+        [nameof(DiscountCashActivated)]   = typeof(DiscountCashActivated),
+        [nameof(DiscountCashDeactivated)] = typeof(DiscountCashDeactivated),
+
+        // AlokasiDiskon (dealer-scoped) events
+        [nameof(AlokasiDiskonCreated)]     = typeof(AlokasiDiskonCreated),
+        [nameof(AlokasiDiskonUpdated)]     = typeof(AlokasiDiskonUpdated),
+        [nameof(AlokasiDiskonActivated)]   = typeof(AlokasiDiskonActivated),
+        [nameof(AlokasiDiskonDeactivated)] = typeof(AlokasiDiskonDeactivated),
     };
 
     public static Type Resolve(string eventType) =>

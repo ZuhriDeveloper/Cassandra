@@ -1,0 +1,338 @@
+@page "/dealer/discount-cash"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Diskon Cash — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Diskon Cash</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    @* ── Left: Create / Edit form ── *@
+    <div class="col-lg-4">
+        @if (_editingId is null)
+        {
+            <div class="card">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Diskon Cash Baru
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Tipe Motor <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_createForm.TipeMotorId">
+                                <option value="">— Pilih —</option>
+                                @foreach (var t in _tipeMotorList.Where(t => t.IsActive))
+                                {
+                                    <option value="@t.Id">@t.ShortName</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _createForm.TipeMotorId" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Diskon Direct (Rp) <span class="text-danger">*</span></label>
+                            <InputNumber class="form-control" @bind-Value="_createForm.DirectDiscount" />
+                            <ValidationMessage For="() => _createForm.DirectDiscount" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Diskon Channel (Rp) <span class="text-danger">*</span></label>
+                            <InputNumber class="form-control" @bind-Value="_createForm.ChannelDiscount" />
+                            <ValidationMessage For="() => _createForm.ChannelDiscount" class="small text-danger" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Diskon Cash
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-pencil me-1"></i> Ubah Diskon Cash</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_editForm" OnValidSubmit="HandleUpdate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Tipe Motor</label>
+                            <p class="form-control-plaintext fw-semibold">@_editForm.TipeMotorName</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Diskon Direct (Rp) <span class="text-danger">*</span></label>
+                            <InputNumber class="form-control" @bind-Value="_editForm.DirectDiscount" />
+                            <ValidationMessage For="() => _editForm.DirectDiscount" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Diskon Channel (Rp) <span class="text-danger">*</span></label>
+                            <InputNumber class="form-control" @bind-Value="_editForm.ChannelDiscount" />
+                            <ValidationMessage For="() => _editForm.ChannelDiscount" class="small text-danger" />
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-grow-1" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-lg me-1"></i>
+                                }
+                                Simpan
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Batal</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Right: list ── *@
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Diskon Cash</div>
+            <div class="card-body p-0">
+                @if (_list is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_list.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada diskon cash yang terdaftar.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tipe Motor</th>
+                                    <th class="text-end">Diskon Direct</th>
+                                    <th class="text-end">Diskon Channel</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _list)
+                                {
+                                    <tr class="@(_editingId == item.Id ? "table-warning" : "")">
+                                        <td>@TipeMotorName(item.TipeMotorId)</td>
+                                        <td class="text-end">@item.DirectDiscount.ToString("N0")</td>
+                                        <td class="text-end">@item.ChannelDiscount.ToString("N0")</td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Tidak Aktif</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <AuthorizeView Roles="Admin">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    <button class="btn btn-sm @(_editingId == item.Id ? "btn-warning" : "btn-outline-secondary")"
+                                                            title="Ubah" @onclick="() => StartEdit(item)">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    @if (item.IsActive)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                title="Nonaktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-on"></i>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-success"
+                                                                title="Aktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-off"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </AuthorizeView>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private List<DiscountCashDto>? _list;
+    private List<TipeMotorDto>     _tipeMotorList = [];
+    private Guid?   _editingId;
+    private string? _notice;
+    private bool    _saving;
+
+    private readonly List<string> _errors = [];
+
+    private DiscountCashCreateForm _createForm = new();
+    private DiscountCashEditForm   _editForm   = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var cashTask  = Api.GetDiscountCashAsync();
+        var tipeTask  = Api.GetTipeMotorAsync();
+        await Task.WhenAll(cashTask, tipeTask);
+        _list          = cashTask.Result ?? [];
+        _tipeMotorList = tipeTask.Result ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _list = await Api.GetDiscountCashAsync() ?? [];
+
+    private string TipeMotorName(Guid id)
+    {
+        var t = _tipeMotorList.FirstOrDefault(x => x.Id == id);
+        return t?.ShortName ?? "—";
+    }
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.CreateDiscountCashAsync(
+            _createForm.TipeMotorId,
+            _createForm.DirectDiscount,
+            _createForm.ChannelDiscount);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = "Diskon Cash berhasil ditambahkan.";
+        _createForm = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (_editingId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var errors = await Api.UpdateDiscountCashAsync(
+            _editingId.Value,
+            _editForm.DirectDiscount,
+            _editForm.ChannelDiscount);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice    = "Diskon Cash berhasil diperbarui.";
+        _editingId = null;
+        _editForm  = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(DiscountCashDto item)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetDiscountCashStatusAsync(item.Id, !item.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Diskon Cash berhasil {(item.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    private void StartEdit(DiscountCashDto item)
+    {
+        _editingId                  = item.Id;
+        _editForm.TipeMotorName     = TipeMotorName(item.TipeMotorId);
+        _editForm.DirectDiscount    = item.DirectDiscount;
+        _editForm.ChannelDiscount   = item.ChannelDiscount;
+        _errors.Clear();
+        _notice = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _editForm  = new();
+        _errors.Clear();
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class DiscountCashCreateForm
+    {
+        [Required(ErrorMessage = "Tipe Motor wajib dipilih.")]
+        public Guid TipeMotorId { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Diskon Direct tidak boleh negatif.")]
+        public decimal DirectDiscount { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Diskon Channel tidak boleh negatif.")]
+        public decimal ChannelDiscount { get; set; }
+    }
+
+    private sealed class DiscountCashEditForm
+    {
+        public string TipeMotorName { get; set; } = string.Empty;
+
+        [Range(0, double.MaxValue, ErrorMessage = "Diskon Direct tidak boleh negatif.")]
+        public decimal DirectDiscount { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Diskon Channel tidak boleh negatif.")]
+        public decimal ChannelDiscount { get; set; }
+    }
+}

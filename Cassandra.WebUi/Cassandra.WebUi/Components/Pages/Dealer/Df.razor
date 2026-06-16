@@ -1,0 +1,190 @@
+@page "/dealer/df"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>DF (Biaya Pembiayaan) — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">DF (Biaya Pembiayaan)</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+@if (_loading)
+{
+    <div class="text-muted">
+        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+    </div>
+}
+else
+{
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+
+            @* ── Current values summary ── *@
+            @if (_current is not null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header fw-semibold">Konfigurasi DF Saat Ini</div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="badge bg-primary fs-6">Diskon: @_current.Discount.ToString("N2") %</span>
+                            <span class="badge bg-secondary fs-6">Bunga: @_current.Interest.ToString("N2") %</span>
+                            <span class="badge bg-info text-dark fs-6">Berlaku sejak: @_current.StartDate.ToString("dd/MM/yyyy")</span>
+                        </div>
+                        <p class="small text-muted mb-0">
+                            Terakhir diperbarui oleh <strong>@_current.UpdatedBy</strong> pada
+                            @_current.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        </p>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Konfigurasi DF belum diatur.
+                </div>
+            }
+
+            @* ── Edit / set form ── *@
+            <div class="card">
+                <div class="card-header fw-semibold">
+                    @if (_current is null)
+                    {
+                        <i class="bi bi-gear me-1"></i>
+                        <span>Atur Konfigurasi DF</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-pencil me-1"></i>
+                        <span>Perbarui Konfigurasi DF</span>
+                    }
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_form" OnValidSubmit="HandleSave">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Diskon DF (%) <span class="text-danger">*</span></label>
+                            <InputNumber class="form-control" @bind-Value="_form.Discount" />
+                            <ValidationMessage For="() => _form.Discount" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Bunga DF (%) <span class="text-danger">*</span></label>
+                            <InputNumber class="form-control" @bind-Value="_form.Interest" />
+                            <ValidationMessage For="() => _form.Interest" class="small text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tanggal Berlaku <span class="text-danger">*</span></label>
+                            <InputDate class="form-control" @bind-Value="_form.StartDate" />
+                            <ValidationMessage For="() => _form.StartDate" class="small text-danger" />
+                        </div>
+                        <AuthorizeView Roles="Admin" Context="auth">
+                            <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-lg me-1"></i>
+                                }
+                                Simpan Konfigurasi DF
+                            </button>
+                        </AuthorizeView>
+                    </EditForm>
+                </div>
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    private DfDto?  _current;
+    private bool    _loading = true;
+    private bool    _saving;
+    private string? _notice;
+
+    private readonly List<string> _errors = [];
+
+    private DfForm _form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        _loading = false;
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _current = await Api.GetDfAsync();
+        }
+        catch
+        {
+            _current = null;
+        }
+
+        if (_current is not null)
+        {
+            _form.Discount  = _current.Discount;
+            _form.Interest  = _current.Interest;
+            _form.StartDate = _current.StartDate;
+        }
+    }
+
+    private async Task HandleSave()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var errors = await Api.SetDfAsync(
+            _form.Discount,
+            _form.Interest,
+            _form.StartDate);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = "Konfigurasi DF berhasil disimpan.";
+        await LoadAsync();
+    }
+
+    // ── Form model ─────────────────────────────────────────────────────────────
+
+    private sealed class DfForm
+    {
+        [Range(0, 100, ErrorMessage = "Diskon harus antara 0 dan 100.")]
+        public decimal Discount { get; set; }
+
+        [Range(0, 100, ErrorMessage = "Bunga harus antara 0 dan 100.")]
+        public decimal Interest { get; set; }
+
+        public DateOnly StartDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    }
+}
