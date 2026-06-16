@@ -38,6 +38,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
     public DbSet<DiscountCashReadModel> DiscountCashReadModels => Set<DiscountCashReadModel>();
     public DbSet<AlokasiDiskonReadModel> AlokasiDiskonReadModels => Set<AlokasiDiskonReadModel>();
 
+    // Phase 4: Service Bureau & Finance Config
+    public DbSet<SamsatReadModel> SamsatReadModels => Set<SamsatReadModel>();
+    public DbSet<SamsatCityReadModel> SamsatCityReadModels => Set<SamsatCityReadModel>();
+    public DbSet<BiroReadModel> BiroReadModels => Set<BiroReadModel>();
+    public DbSet<BiayaBiroJasaReadModel> BiayaBiroJasaReadModels => Set<BiayaBiroJasaReadModel>();
+    public DbSet<BiayaBiroJasaItemReadModel> BiayaBiroJasaItemReadModels => Set<BiayaBiroJasaItemReadModel>();
+    public DbSet<ExpenseTypeReadModel> ExpenseTypeReadModels => Set<ExpenseTypeReadModel>();
+    public DbSet<LedgerReadModel> LedgerReadModels => Set<LedgerReadModel>();
+    public DbSet<PelanggaranWilayahReadModel> PelanggaranWilayahReadModels => Set<PelanggaranWilayahReadModel>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -304,6 +314,90 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
             e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
             e.Property(x => x.UpdatedBy).HasMaxLength(100);
             e.HasIndex(x => new { x.DealerId, x.KaryawanId }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        // ── Phase 4: Service Bureau & Finance Config ───────────────────────────
+
+        builder.Entity<SamsatReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Name }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<SamsatCityReadModel>(e =>
+        {
+            e.HasKey(x => new { x.SamsatId, x.City });
+            e.Property(x => x.City).HasMaxLength(200).IsRequired();
+            // No dealer query filter — accessed via parent Samsat
+        });
+
+        builder.Entity<BiroReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Phone).HasMaxLength(30);
+            e.Property(x => x.Fax).HasMaxLength(30);
+            e.Property(x => x.Pic).HasMaxLength(100);
+            e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.PphRate).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Code }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<BiayaBiroJasaReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.SamsatId, x.BiroId }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<BiayaBiroJasaItemReadModel>(e =>
+        {
+            e.HasKey(x => new { x.BiayaBiroJasaId, x.TipeMotorId });
+            e.Property(x => x.BiayaStnk).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Notice).HasColumnType("numeric(18,2)");
+            // No dealer query filter — accessed via parent BiayaBiroJasa
+        });
+
+        builder.Entity<ExpenseTypeReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Code }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<LedgerReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.Name }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<PelanggaranWilayahReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AreaCode).HasMaxLength(50).IsRequired();
+            e.Property(x => x.ExtraFee).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.AreaCode }).IsUnique();
             e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
         });
     }

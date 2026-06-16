@@ -138,6 +138,32 @@ public static class DependencyInjection
         services.AddScoped<Application.Contracts.AlokasiDiskon.IAlokasiDiskonRepository, AlokasiDiskon.AlokasiDiskonRepository>();
         services.AddScoped<Application.Contracts.AlokasiDiskon.IAlokasiDiskonQueryRepository, AlokasiDiskon.AlokasiDiskonQueryRepository>();
 
+        // ── Phase 4: Service Bureau & Finance Config ───────────────────────────
+
+        // ── Samsat ────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Samsat.ISamsatRepository, Samsat.SamsatRepository>();
+        services.AddScoped<Application.Contracts.Samsat.ISamsatQueryRepository, Samsat.SamsatQueryRepository>();
+
+        // ── Biro ──────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Biro.IBiroRepository, Biro.BiroRepository>();
+        services.AddScoped<Application.Contracts.Biro.IBiroQueryRepository, Biro.BiroQueryRepository>();
+
+        // ── BiayaBiroJasa ─────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.BiayaBiroJasa.IBiayaBiroJasaRepository, BiayaBiroJasa.BiayaBiroJasaRepository>();
+        services.AddScoped<Application.Contracts.BiayaBiroJasa.IBiayaBiroJasaQueryRepository, BiayaBiroJasa.BiayaBiroJasaQueryRepository>();
+
+        // ── ExpenseType ───────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.ExpenseType.IExpenseTypeRepository, ExpenseType.ExpenseTypeRepository>();
+        services.AddScoped<Application.Contracts.ExpenseType.IExpenseTypeQueryRepository, ExpenseType.ExpenseTypeQueryRepository>();
+
+        // ── Ledger ────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Ledger.ILedgerRepository, Ledger.LedgerRepository>();
+        services.AddScoped<Application.Contracts.Ledger.ILedgerQueryRepository, Ledger.LedgerQueryRepository>();
+
+        // ── PelanggaranWilayah ────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.PelanggaranWilayah.IPelanggaranWilayahRepository, PelanggaranWilayah.PelanggaranWilayahRepository>();
+        services.AddScoped<Application.Contracts.PelanggaranWilayah.IPelanggaranWilayahQueryRepository, PelanggaranWilayah.PelanggaranWilayahQueryRepository>();
+
         return services;
     }
 }

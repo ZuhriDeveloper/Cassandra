@@ -1,4 +1,6 @@
 using Cassandra.Domain.AlokasiDiskon.Events;
+using Cassandra.Domain.BiayaBiroJasa.Events;
+using Cassandra.Domain.Biro.Events;
 using Cassandra.Domain.CabangLeasing.Events;
 using Cassandra.Domain.Common;
 using Cassandra.Domain.DaftarHargaLeasing.Events;
@@ -6,6 +8,7 @@ using Cassandra.Domain.Dealers.Events;
 using Cassandra.Domain.Df.Events;
 using Cassandra.Domain.Discount.Events;
 using Cassandra.Domain.DiscountCash.Events;
+using Cassandra.Domain.ExpenseType.Events;
 using Cassandra.Domain.GlobalLeasing.Events;
 using Cassandra.Domain.GrupTenor.Events;
 using Cassandra.Domain.GrupTipeMotor.Events;
@@ -13,8 +16,11 @@ using Cassandra.Domain.Jabatan.Events;
 using Cassandra.Domain.Karyawan.Events;
 using Cassandra.Domain.Kelengkapan.Events;
 using Cassandra.Domain.Kios.Events;
+using Cassandra.Domain.Ledger.Events;
 using Cassandra.Domain.Mediator.Events;
 using Cassandra.Domain.MetodeKeuangan.Events;
+using Cassandra.Domain.PelanggaranWilayah.Events;
+using Cassandra.Domain.Samsat.Events;
 using Cassandra.Domain.Tenor.Events;
 using Cassandra.Domain.TipeMotor.Events;
 using Cassandra.Domain.Warna.Events;
@@ -141,6 +147,45 @@ public static class EventTypeRegistry
         [nameof(AlokasiDiskonUpdated)]     = typeof(AlokasiDiskonUpdated),
         [nameof(AlokasiDiskonActivated)]   = typeof(AlokasiDiskonActivated),
         [nameof(AlokasiDiskonDeactivated)] = typeof(AlokasiDiskonDeactivated),
+
+        // Phase 4: Service Bureau & Finance Config
+
+        // Samsat (dealer-scoped) events
+        [nameof(SamsatCreated)]     = typeof(SamsatCreated),
+        [nameof(SamsatUpdated)]     = typeof(SamsatUpdated),
+        [nameof(SamsatActivated)]   = typeof(SamsatActivated),
+        [nameof(SamsatDeactivated)] = typeof(SamsatDeactivated),
+        [nameof(SamsatCitiesSet)]   = typeof(SamsatCitiesSet),
+
+        // Biro (dealer-scoped) events
+        [nameof(BiroCreated)]     = typeof(BiroCreated),
+        [nameof(BiroUpdated)]     = typeof(BiroUpdated),
+        [nameof(BiroActivated)]   = typeof(BiroActivated),
+        [nameof(BiroDeactivated)] = typeof(BiroDeactivated),
+
+        // BiayaBiroJasa (dealer-scoped) events
+        [nameof(BiayaBiroJasaCreated)]     = typeof(BiayaBiroJasaCreated),
+        [nameof(BiayaBiroJasaActivated)]   = typeof(BiayaBiroJasaActivated),
+        [nameof(BiayaBiroJasaDeactivated)] = typeof(BiayaBiroJasaDeactivated),
+        [nameof(BiayaBiroJasaItemsSet)]    = typeof(BiayaBiroJasaItemsSet),
+
+        // ExpenseType (dealer-scoped) events
+        [nameof(ExpenseTypeCreated)]     = typeof(ExpenseTypeCreated),
+        [nameof(ExpenseTypeUpdated)]     = typeof(ExpenseTypeUpdated),
+        [nameof(ExpenseTypeActivated)]   = typeof(ExpenseTypeActivated),
+        [nameof(ExpenseTypeDeactivated)] = typeof(ExpenseTypeDeactivated),
+
+        // Ledger (dealer-scoped) events
+        [nameof(LedgerCreated)]     = typeof(LedgerCreated),
+        [nameof(LedgerUpdated)]     = typeof(LedgerUpdated),
+        [nameof(LedgerActivated)]   = typeof(LedgerActivated),
+        [nameof(LedgerDeactivated)] = typeof(LedgerDeactivated),
+
+        // PelanggaranWilayah (dealer-scoped) events
+        [nameof(PelanggaranWilayahCreated)]     = typeof(PelanggaranWilayahCreated),
+        [nameof(PelanggaranWilayahUpdated)]     = typeof(PelanggaranWilayahUpdated),
+        [nameof(PelanggaranWilayahActivated)]   = typeof(PelanggaranWilayahActivated),
+        [nameof(PelanggaranWilayahDeactivated)] = typeof(PelanggaranWilayahDeactivated),
     };
 
     public static Type Resolve(string eventType) =>

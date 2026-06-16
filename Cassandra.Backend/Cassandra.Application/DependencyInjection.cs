@@ -1,4 +1,29 @@
 using Cassandra.Application.Commands.AlokasiDiskon.CreateAlokasiDiskon;
+using Cassandra.Application.Commands.BiayaBiroJasa.CreateBiayaBiroJasa;
+using Cassandra.Application.Commands.BiayaBiroJasa.SetBiayaBiroJasaItems;
+using Cassandra.Application.Commands.BiayaBiroJasa.SetBiayaBiroJasaStatus;
+using Cassandra.Application.Commands.Biro.CreateBiro;
+using Cassandra.Application.Commands.Biro.SetBiroStatus;
+using Cassandra.Application.Commands.Biro.UpdateBiro;
+using Cassandra.Application.Commands.ExpenseType.CreateExpenseType;
+using Cassandra.Application.Commands.ExpenseType.SetExpenseTypeStatus;
+using Cassandra.Application.Commands.ExpenseType.UpdateExpenseType;
+using Cassandra.Application.Commands.Ledger.CreateLedger;
+using Cassandra.Application.Commands.Ledger.SetLedgerStatus;
+using Cassandra.Application.Commands.Ledger.UpdateLedger;
+using Cassandra.Application.Commands.PelanggaranWilayah.CreatePelanggaranWilayah;
+using Cassandra.Application.Commands.PelanggaranWilayah.SetPelanggaranWilayahStatus;
+using Cassandra.Application.Commands.PelanggaranWilayah.UpdatePelanggaranWilayah;
+using Cassandra.Application.Commands.Samsat.CreateSamsat;
+using Cassandra.Application.Commands.Samsat.SetSamsatCities;
+using Cassandra.Application.Commands.Samsat.SetSamsatStatus;
+using Cassandra.Application.Commands.Samsat.UpdateSamsat;
+using Cassandra.Application.Queries.BiayaBiroJasa;
+using Cassandra.Application.Queries.Biro;
+using Cassandra.Application.Queries.ExpenseType;
+using Cassandra.Application.Queries.Ledger;
+using Cassandra.Application.Queries.PelanggaranWilayah;
+using Cassandra.Application.Queries.Samsat;
 using Cassandra.Application.Commands.AlokasiDiskon.SetAlokasiDiskonStatus;
 using Cassandra.Application.Commands.AlokasiDiskon.UpdateAlokasiDiskon;
 using Cassandra.Application.Commands.Auth;
@@ -208,6 +233,45 @@ public static class DependencyInjection
         services.AddScoped<UpdateAlokasiDiskonCommandHandler>();
         services.AddScoped<SetAlokasiDiskonStatusCommandHandler>();
         services.AddScoped<GetAlokasiDiskonsQueryHandler>();
+
+        // Phase 4: Service Bureau & Finance Config
+
+        // Samsat
+        services.AddScoped<CreateSamsatCommandHandler>();
+        services.AddScoped<UpdateSamsatCommandHandler>();
+        services.AddScoped<SetSamsatStatusCommandHandler>();
+        services.AddScoped<SetSamsatCitiesCommandHandler>();
+        services.AddScoped<GetSamsatsQueryHandler>();
+
+        // Biro
+        services.AddScoped<CreateBiroCommandHandler>();
+        services.AddScoped<UpdateBiroCommandHandler>();
+        services.AddScoped<SetBiroStatusCommandHandler>();
+        services.AddScoped<GetBirosQueryHandler>();
+
+        // BiayaBiroJasa
+        services.AddScoped<CreateBiayaBiroJasaCommandHandler>();
+        services.AddScoped<SetBiayaBiroJasaStatusCommandHandler>();
+        services.AddScoped<SetBiayaBiroJasaItemsCommandHandler>();
+        services.AddScoped<GetBiayaBiroJasasQueryHandler>();
+
+        // ExpenseType
+        services.AddScoped<CreateExpenseTypeCommandHandler>();
+        services.AddScoped<UpdateExpenseTypeCommandHandler>();
+        services.AddScoped<SetExpenseTypeStatusCommandHandler>();
+        services.AddScoped<GetExpenseTypesQueryHandler>();
+
+        // Ledger
+        services.AddScoped<CreateLedgerCommandHandler>();
+        services.AddScoped<UpdateLedgerCommandHandler>();
+        services.AddScoped<SetLedgerStatusCommandHandler>();
+        services.AddScoped<GetLedgersQueryHandler>();
+
+        // PelanggaranWilayah
+        services.AddScoped<CreatePelanggaranWilayahCommandHandler>();
+        services.AddScoped<UpdatePelanggaranWilayahCommandHandler>();
+        services.AddScoped<SetPelanggaranWilayahStatusCommandHandler>();
+        services.AddScoped<GetPelanggaranWilayahsQueryHandler>();
 
         // Validators (all assemblies scanned from this project)
         services.AddValidatorsFromAssemblyContaining<LoginCommandHandler>();

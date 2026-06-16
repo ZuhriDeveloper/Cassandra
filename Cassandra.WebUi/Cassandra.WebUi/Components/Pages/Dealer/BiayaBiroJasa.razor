@@ -1,0 +1,371 @@
+@page "/dealer/biaya-biro-jasa"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Biaya Biro Jasa — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Biaya Biro Jasa</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+@* ── Top row: Create form + List table ── *@
+<div class="row g-4">
+
+    @* ── Left: Create form ── *@
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header fw-semibold">
+                <i class="bi bi-plus-circle me-1"></i> Tambah Biaya Biro Jasa Baru
+            </div>
+            <div class="card-body">
+                <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label class="form-label">Samsat <span class="text-danger">*</span></label>
+                        <InputSelect class="form-select" @bind-Value="_createForm.SamsatId">
+                            <option value="">— Pilih Samsat —</option>
+                            @foreach (var s in _samsatList?.Where(s => s.IsActive) ?? [])
+                            {
+                                <option value="@s.Id">@s.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => _createForm.SamsatId" class="small text-danger" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Biro <span class="text-danger">*</span></label>
+                        <InputSelect class="form-select" @bind-Value="_createForm.BiroId">
+                            <option value="">— Pilih Biro —</option>
+                            @foreach (var b in _biroList?.Where(b => b.IsActive) ?? [])
+                            {
+                                <option value="@b.Id">@b.Code — @b.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => _createForm.BiroId" class="small text-danger" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-lg me-1"></i>
+                        }
+                        Simpan Biaya Biro Jasa
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    @* ── Right: list ── *@
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Biaya Biro Jasa</div>
+            <div class="card-body p-0">
+                @if (_list is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_list.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada biaya biro jasa yang terdaftar.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Samsat</th>
+                                    <th>Biro</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _list)
+                                {
+                                    <tr class="@(_managingItemsId == item.Id ? "table-info" : "")">
+                                        <td>@SamsatName(item.SamsatId)</td>
+                                        <td class="small">@BiroCode(item.BiroId)</td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Tidak Aktif</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <AuthorizeView Roles="Admin">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    <button class="btn btn-sm @(_managingItemsId == item.Id ? "btn-info" : "btn-outline-info")"
+                                                            title="Kelola Biaya" @onclick="() => StartManageItems(item)">
+                                                        <i class="bi bi-table"></i>
+                                                    </button>
+                                                    @if (item.IsActive)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                title="Nonaktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-on"></i>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-success"
+                                                                title="Aktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-off"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </AuthorizeView>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@* ── Items management section ── *@
+@if (_managingItemsId is not null && _itemRows.Count > 0)
+{
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header fw-semibold text-info-emphasis bg-info-subtle d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="bi bi-table me-1"></i> Kelola Biaya —
+                        @SamsatName(_list?.FirstOrDefault(x => x.Id == _managingItemsId)?.SamsatId ?? Guid.Empty)
+                        / @BiroCode(_list?.FirstOrDefault(x => x.Id == _managingItemsId)?.BiroId ?? Guid.Empty)
+                    </span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelManageItems">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tipe Motor</th>
+                                    <th class="text-end">Biaya STNK (Rp)</th>
+                                    <th class="text-end">Notice (Rp)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in _itemRows)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@row.TipeMotorCode</td>
+                                        <td class="text-end" style="width:160px">
+                                            <InputNumber class="form-control form-control-sm text-end" @bind-Value="row.BiayaStnk" />
+                                        </td>
+                                        <td class="text-end" style="width:160px">
+                                            <InputNumber class="form-control form-control-sm text-end" @bind-Value="row.Notice" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-3 border-top">
+                        <button class="btn btn-info" @onclick="HandleSaveItems" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Biaya
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<BiayaBiroJasaDto>? _list;
+    private List<SamsatDto>?        _samsatList;
+    private List<BiroDto>?          _biroList;
+    private List<TipeMotorDto>?     _tipeMotors;
+
+    private Guid?   _managingItemsId;
+    private string? _notice;
+    private bool    _saving;
+
+    private readonly List<string>        _errors   = [];
+    private readonly List<BiayaItemRow>  _itemRows = [];
+
+    private BiayaBiroJasaCreateForm _createForm = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var listTask      = Api.GetBiayaBiroJasaAsync();
+        var samsatTask    = Api.GetSamsatAsync();
+        var biroTask      = Api.GetBiroAsync();
+        var tipeMotorTask = Api.GetTipeMotorAsync();
+        await Task.WhenAll(listTask, samsatTask, biroTask, tipeMotorTask);
+        _list       = listTask.Result      ?? [];
+        _samsatList = samsatTask.Result    ?? [];
+        _biroList   = biroTask.Result      ?? [];
+        _tipeMotors = tipeMotorTask.Result ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _list = await Api.GetBiayaBiroJasaAsync() ?? [];
+
+    private string SamsatName(Guid id)
+    {
+        var s = _samsatList?.FirstOrDefault(x => x.Id == id);
+        return s?.Name ?? "—";
+    }
+
+    private string BiroCode(Guid id)
+    {
+        var b = _biroList?.FirstOrDefault(x => x.Id == id);
+        return b is not null ? $"{b.Code} — {b.Name}" : "—";
+    }
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.CreateBiayaBiroJasaAsync(
+            _createForm.SamsatId,
+            _createForm.BiroId);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = "Biaya Biro Jasa berhasil ditambahkan.";
+        _createForm = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(BiayaBiroJasaDto item)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetBiayaBiroJasaStatusAsync(item.Id, !item.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Biaya Biro Jasa berhasil {(item.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    private async Task StartManageItems(BiayaBiroJasaDto item)
+    {
+        _managingItemsId = item.Id;
+        _errors.Clear();
+        _notice = null;
+
+        _itemRows.Clear();
+
+        var full = await Api.GetBiayaBiroJasaByIdAsync(item.Id);
+
+        foreach (var tm in _tipeMotors?.Where(t => t.IsActive) ?? [])
+        {
+            var existing = full?.Items?.FirstOrDefault(x => x.TipeMotorId == tm.Id);
+            _itemRows.Add(new BiayaItemRow
+            {
+                TipeMotorId   = tm.Id,
+                TipeMotorCode = tm.Code,
+                BiayaStnk     = existing?.BiayaStnk ?? 0,
+                Notice        = existing?.Notice    ?? 0
+            });
+        }
+    }
+
+    private void CancelManageItems()
+    {
+        _managingItemsId = null;
+        _itemRows.Clear();
+        _errors.Clear();
+    }
+
+    private async Task HandleSaveItems()
+    {
+        if (_managingItemsId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var items = _itemRows
+            .Select(r => new BiayaBiroJasaItemRequest(r.TipeMotorId, r.BiayaStnk, r.Notice))
+            .ToList();
+
+        var errors = await Api.SetBiayaBiroJasaItemsAsync(_managingItemsId.Value, items);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = "Biaya berhasil disimpan.";
+        await LoadAsync();
+    }
+
+    // ── Row model ──────────────────────────────────────────────────────────────
+
+    private sealed class BiayaItemRow
+    {
+        public Guid    TipeMotorId   { get; set; }
+        public string  TipeMotorCode { get; set; } = "";
+        public decimal BiayaStnk     { get; set; }
+        public decimal Notice        { get; set; }
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class BiayaBiroJasaCreateForm
+    {
+        [Required(ErrorMessage = "Samsat wajib dipilih.")]
+        public Guid SamsatId { get; set; }
+
+        [Required(ErrorMessage = "Biro wajib dipilih.")]
+        public Guid BiroId { get; set; }
+    }
+}

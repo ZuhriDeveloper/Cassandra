@@ -561,6 +561,177 @@ public class MasterDataApiClient(HttpClient http)
         return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
     }
 
+    // ── Samsat ────────────────────────────────────────────────────────────────────
+
+    public Task<List<SamsatDto>?> GetSamsatAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<SamsatDto>>("api/dealer/samsat", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateSamsatAsync(
+        string name, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/samsat", new { name }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateSamsatResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> UpdateSamsatAsync(Guid id, string name, CancellationToken ct = default)
+    {
+        var response = await http.PutAsJsonAsync($"api/dealer/samsat/{id}", new { name }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetSamsatStatusAsync(Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/samsat/{id}/status", new { isActive }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetSamsatCitiesAsync(Guid id, List<string> cities, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/samsat/{id}/cities", new { cities }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── Biro ──────────────────────────────────────────────────────────────────────
+
+    public Task<List<BiroDto>?> GetBiroAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<BiroDto>>("api/dealer/biro", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateBiroAsync(
+        string code, string name, string? phone, string? fax, string? pic,
+        string? address, decimal pphRate, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/biro",
+            new { code, name, phone, fax, pic, address, pphRate }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateBiroResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> UpdateBiroAsync(Guid id, string name, string? phone, string? fax,
+        string? pic, string? address, decimal pphRate, CancellationToken ct = default)
+    {
+        var response = await http.PutAsJsonAsync($"api/dealer/biro/{id}",
+            new { name, phone, fax, pic, address, pphRate }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetBiroStatusAsync(Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/biro/{id}/status", new { isActive }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── BiayaBiroJasa ─────────────────────────────────────────────────────────────
+
+    public Task<List<BiayaBiroJasaDto>?> GetBiayaBiroJasaAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<BiayaBiroJasaDto>>("api/dealer/biaya-biro-jasa", ct);
+
+    public Task<BiayaBiroJasaDto?> GetBiayaBiroJasaByIdAsync(Guid id, CancellationToken ct = default)
+        => http.GetFromJsonAsync<BiayaBiroJasaDto>($"api/dealer/biaya-biro-jasa/{id}", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateBiayaBiroJasaAsync(
+        Guid samsatId, Guid biroId, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/biaya-biro-jasa", new { samsatId, biroId }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateBiayaBiroJasaResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> SetBiayaBiroJasaStatusAsync(Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/biaya-biro-jasa/{id}/status", new { isActive }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetBiayaBiroJasaItemsAsync(
+        Guid id, List<BiayaBiroJasaItemRequest> items, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/biaya-biro-jasa/{id}/items", new { items }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── ExpenseType ───────────────────────────────────────────────────────────────
+
+    public Task<List<ExpenseTypeDto>?> GetExpenseTypeAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<ExpenseTypeDto>>("api/dealer/expense-type", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateExpenseTypeAsync(
+        string code, string name, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/expense-type", new { code, name }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateExpenseTypeResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> UpdateExpenseTypeAsync(Guid id, string name, CancellationToken ct = default)
+    {
+        var response = await http.PutAsJsonAsync($"api/dealer/expense-type/{id}", new { name }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetExpenseTypeStatusAsync(Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/expense-type/{id}/status", new { isActive }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── Ledger ────────────────────────────────────────────────────────────────────
+
+    public Task<List<LedgerDto>?> GetLedgerAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<LedgerDto>>("api/dealer/ledger", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateLedgerAsync(
+        string name, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/ledger", new { name }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateLedgerResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> UpdateLedgerAsync(Guid id, string name, CancellationToken ct = default)
+    {
+        var response = await http.PutAsJsonAsync($"api/dealer/ledger/{id}", new { name }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetLedgerStatusAsync(Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/ledger/{id}/status", new { isActive }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── PelanggaranWilayah ────────────────────────────────────────────────────────
+
+    public Task<List<PelanggaranWilayahDto>?> GetPelanggaranWilayahAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<PelanggaranWilayahDto>>("api/dealer/pelanggaran-wilayah", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreatePelanggaranWilayahAsync(
+        string areaCode, decimal extraFee, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/pelanggaran-wilayah",
+            new { areaCode, extraFee }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreatePelanggaranWilayahResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> UpdatePelanggaranWilayahAsync(Guid id, decimal extraFee, CancellationToken ct = default)
+    {
+        var response = await http.PutAsJsonAsync($"api/dealer/pelanggaran-wilayah/{id}", new { extraFee }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetPelanggaranWilayahStatusAsync(Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/pelanggaran-wilayah/{id}/status", new { isActive }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static async Task<List<string>> ReadErrorsAsync(HttpResponseMessage r)
@@ -679,3 +850,24 @@ public record AlokasiDiskonDto(Guid Id, Guid KaryawanId, string DiscountLevel, b
 public record CreateAlokasiDiskonResponse(Guid Id);
 
 public record DfDto(Guid Id, decimal Discount, decimal Interest, DateOnly StartDate, string UpdatedBy, DateTime UpdatedAt);
+
+// Phase 4 — Service Bureau & Finance Config
+public record SamsatDto(Guid Id, string Name, bool IsActive, List<string>? Cities);
+public record CreateSamsatResponse(Guid Id);
+
+public record BiroDto(Guid Id, string Code, string Name, string? Phone, string? Fax, string? Pic, string? Address, decimal PphRate, bool IsActive);
+public record CreateBiroResponse(Guid Id);
+
+public record BiayaBiroJasaItemDto(Guid TipeMotorId, decimal BiayaStnk, decimal Notice);
+public record BiayaBiroJasaDto(Guid Id, Guid SamsatId, Guid BiroId, bool IsActive, List<BiayaBiroJasaItemDto>? Items);
+public record CreateBiayaBiroJasaResponse(Guid Id);
+public record BiayaBiroJasaItemRequest(Guid TipeMotorId, decimal BiayaStnk, decimal Notice);
+
+public record ExpenseTypeDto(Guid Id, string Code, string Name, bool IsActive);
+public record CreateExpenseTypeResponse(Guid Id);
+
+public record LedgerDto(Guid Id, string Name, bool IsActive);
+public record CreateLedgerResponse(Guid Id);
+
+public record PelanggaranWilayahDto(Guid Id, string AreaCode, decimal ExtraFee, bool IsActive);
+public record CreatePelanggaranWilayahResponse(Guid Id);

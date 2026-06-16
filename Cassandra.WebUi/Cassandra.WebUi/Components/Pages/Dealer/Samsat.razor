@@ -1,0 +1,378 @@
+@page "/dealer/samsat"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Samsat — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Samsat</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    @* ── Left: Create / Edit form ── *@
+    <div class="col-lg-4">
+        @if (_editingId is null)
+        {
+            <div class="card">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Samsat Baru
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_createForm" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Nama <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_createForm.Name" placeholder="cth. Samsat Jakarta Barat" />
+                            <ValidationMessage For="() => _createForm.Name" class="small text-danger" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Samsat
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-pencil me-1"></i> Ubah Samsat</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_editForm" OnValidSubmit="HandleUpdate">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Nama <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_editForm.Name" />
+                            <ValidationMessage For="() => _editForm.Name" class="small text-danger" />
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-grow-1" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-lg me-1"></i>
+                                }
+                                Simpan
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Batal</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Right: list ── *@
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-semibold">Semua Samsat</div>
+            <div class="card-body p-0">
+                @if (_list is null)
+                {
+                    <div class="p-3 text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+                    </div>
+                }
+                else if (_list.Count == 0)
+                {
+                    <div class="p-3 text-muted">Belum ada samsat yang terdaftar.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nama</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _list)
+                                {
+                                    <tr class="@(_editingId == item.Id ? "table-warning" : "") @(_managingCitiesId == item.Id ? "table-info" : "")">
+                                        <td class="fw-semibold">@item.Name</td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Tidak Aktif</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <AuthorizeView Roles="Admin">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    <button class="btn btn-sm @(_editingId == item.Id ? "btn-warning" : "btn-outline-secondary")"
+                                                            title="Ubah" @onclick="() => StartEdit(item)">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm @(_managingCitiesId == item.Id ? "btn-info" : "btn-outline-info")"
+                                                            title="Kelola Kota" @onclick="() => StartManageCities(item)">
+                                                        <i class="bi bi-geo-alt"></i>
+                                                    </button>
+                                                    @if (item.IsActive)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                title="Nonaktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-on"></i>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-success"
+                                                                title="Aktifkan"
+                                                                @onclick="() => HandleToggleStatus(item)">
+                                                            <i class="bi bi-toggle-off"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </AuthorizeView>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@* ── City management section ── *@
+@if (_managingCitiesId is not null)
+{
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header fw-semibold text-info-emphasis bg-info-subtle d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-geo-alt me-1"></i> Kelola Kota — @_managingCitiesItem?.Name</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelManageCities">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    @for (var i = 0; i < _editCities.Count; i++)
+                    {
+                        var idx = i;
+                        <div class="d-flex gap-2 mb-2">
+                            <input type="text" class="form-control"
+                                   value="@_editCities[idx]"
+                                   @oninput="e => _editCities[idx] = e.Value?.ToString() ?? string.Empty"
+                                   placeholder="Nama kabupaten/kota" />
+                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveCity(idx)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    }
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="button" class="btn btn-outline-secondary" @onclick="AddCity">
+                            <i class="bi bi-plus-circle me-1"></i> Tambah Kota
+                        </button>
+                        <button type="button" class="btn btn-info" disabled="@_saving" @onclick="HandleSaveCities">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg me-1"></i>
+                            }
+                            Simpan Kota
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<SamsatDto>? _list;
+    private Guid?            _editingId;
+    private string?          _notice;
+    private bool             _saving;
+
+    private readonly List<string> _errors = [];
+
+    private SamsatCreateForm _createForm = new();
+    private SamsatEditForm   _editForm   = new();
+
+    // ── City management state ───────────────────────────────────────────────────
+    private Guid?      _managingCitiesId;
+    private SamsatDto? _managingCitiesItem;
+    private List<string> _editCities = new();
+
+    protected override async Task OnInitializedAsync()
+        => _list = await Api.GetSamsatAsync() ?? [];
+
+    private async Task LoadAsync()
+        => _list = await Api.GetSamsatAsync() ?? [];
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        _saving = true;
+
+        var (id, errors) = await Api.CreateSamsatAsync(_createForm.Name.Trim());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = $"Samsat '{_createForm.Name}' berhasil ditambahkan.";
+        _createForm = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (_editingId is null) return;
+
+        _errors.Clear();
+        _saving = true;
+
+        var errors = await Api.UpdateSamsatAsync(_editingId.Value, _editForm.Name.Trim());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice    = "Samsat berhasil diperbarui.";
+        _editingId = null;
+        _editForm  = new();
+        await LoadAsync();
+    }
+
+    private async Task HandleToggleStatus(SamsatDto item)
+    {
+        _errors.Clear();
+
+        var errors = await Api.SetSamsatStatusAsync(item.Id, !item.IsActive);
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = $"Samsat '{item.Name}' berhasil {(item.IsActive ? "dinonaktifkan" : "diaktifkan")}.";
+        await LoadAsync();
+    }
+
+    private void StartEdit(SamsatDto item)
+    {
+        _editingId    = item.Id;
+        _editForm.Name = item.Name;
+        _managingCitiesId   = null;
+        _managingCitiesItem = null;
+        _editCities.Clear();
+        _errors.Clear();
+        _notice = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _editForm  = new();
+        _errors.Clear();
+    }
+
+    private async Task StartManageCities(SamsatDto item)
+    {
+        _managingCitiesId   = item.Id;
+        _managingCitiesItem = item;
+        var list = await Api.GetSamsatAsync();
+        var full = list?.FirstOrDefault(x => x.Id == item.Id);
+        _editCities = full?.Cities?.ToList() ?? new List<string>();
+        _editingId  = null;
+        _editForm   = new();
+        _errors.Clear();
+    }
+
+    private void AddCity()    => _editCities.Add(string.Empty);
+    private void RemoveCity(int idx) => _editCities.RemoveAt(idx);
+
+    private void CancelManageCities()
+    {
+        _managingCitiesId   = null;
+        _managingCitiesItem = null;
+        _editCities.Clear();
+    }
+
+    private async Task HandleSaveCities()
+    {
+        if (_managingCitiesId is null) return;
+        _saving = true;
+        var cities = _editCities
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .Distinct()
+            .ToList();
+        var errors = await Api.SetSamsatCitiesAsync(_managingCitiesId.Value, cities);
+        _saving = false;
+        if (errors is not null) { _errors.AddRange(errors); return; }
+        _notice = "Kota berhasil disimpan.";
+        await LoadAsync();
+        _editCities = cities;
+    }
+
+    // ── Form models ────────────────────────────────────────────────────────────
+
+    private sealed class SamsatCreateForm
+    {
+        [Required(ErrorMessage = "Nama samsat wajib diisi.")]
+        [MaxLength(200, ErrorMessage = "Nama maksimal 200 karakter.")]
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class SamsatEditForm
+    {
+        [Required(ErrorMessage = "Nama samsat wajib diisi.")]
+        [MaxLength(200, ErrorMessage = "Nama maksimal 200 karakter.")]
+        public string Name { get; set; } = string.Empty;
+    }
+}
