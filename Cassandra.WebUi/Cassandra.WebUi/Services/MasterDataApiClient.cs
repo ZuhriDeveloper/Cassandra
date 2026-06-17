@@ -835,6 +835,69 @@ public class MasterDataApiClient(HttpClient http)
         return (result?.Id, null);
     }
 
+    // ── RegistrasiPenjualan (Sales) ───────────────────────────────────────────────
+
+    public Task<List<RegistrasiPenjualanDto>?> GetRegistrasiPenjualansAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<RegistrasiPenjualanDto>>("api/dealer/registrasi-penjualan", ct);
+
+    public Task<RegistrasiPenjualanDto?> GetRegistrasiPenjualanByIdAsync(Guid id, CancellationToken ct = default)
+        => http.GetFromJsonAsync<RegistrasiPenjualanDto>($"api/dealer/registrasi-penjualan/{id}", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateRegistrasiPenjualanAsync(
+        string noPenjualan, DateOnly saleDate, Guid karyawanId, Guid kiosId, Guid? mediatorId,
+        string metodePenjualan, string tipePenjualan, string noMesin, string noRangka,
+        string namaCustomer, string address, string phone, string? phone1, string? phone2,
+        decimal offRoad, decimal bbn, decimal discount, decimal total,
+        decimal ambilUang, decimal dp, decimal angsuran,
+        Guid? daftarHargaLeasingId, string? tenorCode,
+        string serahTerimaKendaraanId, string? tandaTerimaSementaraId,
+        List<string> kelengkapan, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/registrasi-penjualan", new {
+            noPenjualan, saleDate, karyawanId, kiosId, mediatorId, metodePenjualan, tipePenjualan,
+            noMesin, noRangka, namaCustomer, address, phone, phone1, phone2,
+            offRoad, bbn, discount, total, ambilUang, dp, angsuran,
+            daftarHargaLeasingId, tenorCode, serahTerimaKendaraanId, tandaTerimaSementaraId, kelengkapan
+        }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateRegistrasiPenjualanResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> ApproveRegistrasiPenjualanAsync(Guid id, decimal approvedDiscount, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/registrasi-penjualan/{id}/approve", new { approvedDiscount }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> VoidRegistrasiPenjualanAsync(Guid id, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/registrasi-penjualan/{id}/void", new { }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> SetEnableToVoidAsync(Guid id, bool enableToVoid, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/registrasi-penjualan/{id}/enable-to-void", new { enableToVoid }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── PengirimanMotor (Delivery) ────────────────────────────────────────────────
+
+    public Task<List<PengirimanMotorDto>?> GetPengirimanMotorsAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<PengirimanMotorDto>>("api/dealer/pengiriman-motor", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreatePengirimanMotorAsync(
+        Guid registrasiPenjualanId, string noMesin, Guid driver1Id, Guid? driver2Id,
+        DateOnly deliveryDate, string? zona, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/pengiriman-motor",
+            new { registrasiPenjualanId, noMesin, driver1Id, driver2Id, deliveryDate, zona }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreatePengirimanMotorResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static async Task<List<string>> ReadErrorsAsync(HttpResponseMessage r)
@@ -1006,3 +1069,21 @@ public record MutasiDto(Guid Id, string MutasiNumber, DateOnly MutasiDate, Guid 
     Guid DestinationKiosId, bool IsActive, List<string>? EngineNumbers, List<MutasiKelengkapanItemDto>? KelengkapanItems);
 public record MutasiKelengkapanItemRequest(string KelengkapanName, int Qty);
 public record CreateMutasiResponse(Guid Id);
+
+// Phase 6 — Sales
+public record RegistrasiPenjualanDto(
+    Guid Id, string NoPenjualan, DateOnly SaleDate, Guid KaryawanId, Guid KiosId, Guid? MediatorId,
+    string MetodePenjualan, string TipePenjualan, string NoMesin, string NoRangka,
+    string NamaCustomer, string Address, string Phone, string? Phone1, string? Phone2,
+    decimal OffRoad, decimal Bbn, decimal Discount, decimal ApprovedDiscount, decimal OriginalDiscount,
+    decimal Total, decimal AmbilUang, decimal Dp, decimal Angsuran, decimal Tac,
+    Guid? DaftarHargaLeasingId, string? TenorCode, string TipeMotorCode, string WarnaName,
+    string SerahTerimaKendaraanId, string? TandaTerimaSementaraId,
+    List<string> Kelengkapan, bool IsApproved, bool IsSent, bool IsVoid, bool EnableToVoid, string Status);
+public record CreateRegistrasiPenjualanResponse(Guid Id);
+
+public record PengirimanMotorDto(
+    Guid Id, Guid RegistrasiPenjualanId, string NoMesin,
+    Guid Driver1Id, Guid? Driver2Id, DateOnly DeliveryDate, string? Zona,
+    string CreatedBy, DateTime CreatedAt);
+public record CreatePengirimanMotorResponse(Guid Id);

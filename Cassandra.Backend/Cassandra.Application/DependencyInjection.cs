@@ -1,4 +1,11 @@
 using Cassandra.Application.Commands.Mutasi.CreateMutasi;
+using Cassandra.Application.Commands.PengirimanMotor.CreatePengirimanMotor;
+using Cassandra.Application.Commands.RegistrasiPenjualan.ApproveRegistrasiPenjualan;
+using Cassandra.Application.Commands.RegistrasiPenjualan.CreateRegistrasiPenjualan;
+using Cassandra.Application.Commands.RegistrasiPenjualan.SetEnableToVoid;
+using Cassandra.Application.Commands.RegistrasiPenjualan.VoidRegistrasiPenjualan;
+using Cassandra.Application.Queries.PengirimanMotor;
+using Cassandra.Application.Queries.RegistrasiPenjualan;
 using Cassandra.Application.Commands.So.ChangeSoStatus;
 using Cassandra.Application.Commands.So.CreateSo;
 using Cassandra.Application.Commands.So.DeleteSo;
@@ -308,6 +315,19 @@ public static class DependencyInjection
         // Mutasi
         services.AddScoped<CreateMutasiCommandHandler>();
         services.AddScoped<GetMutasisQueryHandler>();
+
+        // Phase 6: Sales
+
+        // RegistrasiPenjualan
+        services.AddScoped<CreateRegistrasiPenjualanCommandHandler>();
+        services.AddScoped<ApproveRegistrasiPenjualanCommandHandler>();
+        services.AddScoped<VoidRegistrasiPenjualanCommandHandler>();
+        services.AddScoped<SetEnableToVoidCommandHandler>();
+        services.AddScoped<GetRegistrasiPenjualansQueryHandler>();
+
+        // PengirimanMotor
+        services.AddScoped<CreatePengirimanMotorCommandHandler>();
+        services.AddScoped<GetPengirimanMotorsQueryHandler>();
 
         // Validators (all assemblies scanned from this project)
         services.AddValidatorsFromAssemblyContaining<LoginCommandHandler>();

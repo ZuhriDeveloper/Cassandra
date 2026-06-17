@@ -1,4 +1,6 @@
 using Cassandra.Domain.AlokasiDiskon.Events;
+using Cassandra.Domain.PengirimanMotor.Events;
+using Cassandra.Domain.RegistrasiPenjualan.Events;
 using Cassandra.Domain.BiayaBiroJasa.Events;
 using Cassandra.Domain.Biro.Events;
 using Cassandra.Domain.CabangLeasing.Events;
@@ -212,6 +214,18 @@ public static class EventTypeRegistry
 
         // Mutasi (dealer-scoped) events
         [nameof(MutasiCreated)] = typeof(MutasiCreated),
+
+        // Phase 6: Sales
+
+        // RegistrasiPenjualan (dealer-scoped) events
+        [nameof(RegistrasiPenjualanCreated)]         = typeof(RegistrasiPenjualanCreated),
+        [nameof(RegistrasiPenjualanApproved)]        = typeof(RegistrasiPenjualanApproved),
+        [nameof(RegistrasiPenjualanSent)]            = typeof(RegistrasiPenjualanSent),
+        [nameof(RegistrasiPenjualanVoided)]          = typeof(RegistrasiPenjualanVoided),
+        [nameof(RegistrasiPenjualanEnableToVoidSet)] = typeof(RegistrasiPenjualanEnableToVoidSet),
+
+        // PengirimanMotor (dealer-scoped) events
+        [nameof(PengirimanMotorCreated)] = typeof(PengirimanMotorCreated),
     };
 
     public static Type Resolve(string eventType) =>

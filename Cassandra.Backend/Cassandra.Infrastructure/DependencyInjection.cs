@@ -186,6 +186,16 @@ public static class DependencyInjection
         services.AddScoped<Application.Contracts.Mutasi.IMutasiRepository, Mutasi.MutasiRepository>();
         services.AddScoped<Application.Contracts.Mutasi.IMutasiQueryRepository, Mutasi.MutasiQueryRepository>();
 
+        // ── Phase 6: Sales ────────────────────────────────────────────────────
+
+        // ── RegistrasiPenjualan ───────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.RegistrasiPenjualan.IRegistrasiPenjualanRepository, RegistrasiPenjualan.RegistrasiPenjualanRepository>();
+        services.AddScoped<Application.Contracts.RegistrasiPenjualan.IRegistrasiPenjualanQueryRepository, RegistrasiPenjualan.RegistrasiPenjualanQueryRepository>();
+
+        // ── PengirimanMotor ───────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.PengirimanMotor.IPengirimanMotorRepository, PengirimanMotor.PengirimanMotorRepository>();
+        services.AddScoped<Application.Contracts.PengirimanMotor.IPengirimanMotorQueryRepository, PengirimanMotor.PengirimanMotorQueryRepository>();
+
         return services;
     }
 }

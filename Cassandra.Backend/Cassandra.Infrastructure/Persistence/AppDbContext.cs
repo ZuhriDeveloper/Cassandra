@@ -49,6 +49,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
     public DbSet<LedgerReadModel> LedgerReadModels => Set<LedgerReadModel>();
     public DbSet<PelanggaranWilayahReadModel> PelanggaranWilayahReadModels => Set<PelanggaranWilayahReadModel>();
 
+    // Phase 6: Sales
+    public DbSet<RegistrasiPenjualanReadModel> RegistrasiPenjualanReadModels => Set<RegistrasiPenjualanReadModel>();
+    public DbSet<PengirimanMotorReadModel> PengirimanMotorReadModels => Set<PengirimanMotorReadModel>();
+
     // Phase 5: Inventory & Stock
     public DbSet<SoReadModel> SoReadModels => Set<SoReadModel>();
     public DbSet<SoItemReadModel> SoItemReadModels => Set<SoItemReadModel>();
@@ -521,6 +525,52 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
             e.HasKey(x => new { x.MutasiId, x.KelengkapanName });
             e.Property(x => x.KelengkapanName).HasMaxLength(200).IsRequired();
             // No dealer query filter — accessed via parent Mutasi
+        });
+
+        // ── Phase 6: Sales ─────────────────────────────────────────────────────
+
+        builder.Entity<RegistrasiPenjualanReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.NoPenjualan).HasMaxLength(50).IsRequired();
+            e.Property(x => x.MetodePenjualan).HasMaxLength(10).IsRequired();
+            e.Property(x => x.TipePenjualan).HasMaxLength(20).IsRequired();
+            e.Property(x => x.NoMesin).HasMaxLength(100).IsRequired();
+            e.Property(x => x.NoRangka).HasMaxLength(100).IsRequired();
+            e.Property(x => x.NamaCustomer).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.Phone).HasMaxLength(30).IsRequired();
+            e.Property(x => x.Phone1).HasMaxLength(30);
+            e.Property(x => x.Phone2).HasMaxLength(30);
+            e.Property(x => x.OffRoad).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Bbn).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Discount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.ApprovedDiscount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.OriginalDiscount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Total).HasColumnType("numeric(18,2)");
+            e.Property(x => x.AmbilUang).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Dp).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Angsuran).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Tac).HasColumnType("numeric(18,2)");
+            e.Property(x => x.TenorCode).HasMaxLength(50);
+            e.Property(x => x.TipeMotorCode).HasMaxLength(100).IsRequired();
+            e.Property(x => x.WarnaName).HasMaxLength(100).IsRequired();
+            e.Property(x => x.SerahTerimaKendaraanId).HasMaxLength(100).IsRequired();
+            e.Property(x => x.TandaTerimaSementaraId).HasMaxLength(100);
+            e.Property(x => x.Kelengkapan).HasMaxLength(1000);
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.NoPenjualan }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<PengirimanMotorReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.NoMesin).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Zona).HasMaxLength(100);
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
         });
     }
 }

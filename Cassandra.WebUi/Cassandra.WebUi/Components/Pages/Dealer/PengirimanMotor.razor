@@ -1,0 +1,259 @@
+@page "/dealer/pengiriman-motor"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Pengiriman Motor — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Pengiriman Motor</h4>
+    <AuthorizeView Roles="Admin,Sales">
+        <button class="btn btn-primary" @onclick="ToggleCreate">
+            <i class="bi bi-plus-lg me-1"></i>
+            @(_showCreate ? "Tutup Form" : "Buat Pengiriman")
+        </button>
+    </AuthorizeView>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+@* ── Create form ── *@
+@if (_showCreate)
+{
+    <div class="card mb-4">
+        <div class="card-header fw-semibold">
+            <i class="bi bi-plus-circle me-1"></i> Buat Pengiriman Motor Baru
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Registrasi Penjualan <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" Value="_registrasiPenjualanId"
+                                 ValueChanged="(Guid id) => OnRegistrasiSelected(id)"
+                                 ValueExpression="() => _registrasiPenjualanId">
+                        <option value="">— Pilih Penjualan (APPROVED) —</option>
+                        @foreach (var reg in (_approvedRegistrasis ?? []))
+                        {
+                            <option value="@reg.Id">@reg.NoPenjualan — @reg.NamaCustomer — @reg.NoMesin</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">No. Mesin</label>
+                    <input type="text" class="form-control font-monospace" value="@_noMesin" readonly
+                           placeholder="(Terisi otomatis dari pilihan penjualan)" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Driver 1 <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" @bind-Value="_driver1Id">
+                        <option value="">— Pilih Driver 1 —</option>
+                        @foreach (var k in (_karyawans ?? []).Where(k => k.IsActive))
+                        {
+                            <option value="@k.Id">@k.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Driver 2 <span class="text-muted small">(opsional)</span></label>
+                    <InputSelect class="form-select" @bind-Value="_driver2Id">
+                        <option value="">— Tanpa Driver 2 —</option>
+                        @foreach (var k in (_karyawans ?? []).Where(k => k.IsActive))
+                        {
+                            <option value="@k.Id">@k.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Tanggal Kirim <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" value="@_deliveryDate.ToString("yyyy-MM-dd")"
+                           @onchange="e => _deliveryDate = DateOnly.Parse(e.Value?.ToString() ?? _deliveryDate.ToString())" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Zona <span class="text-muted small">(opsional)</span></label>
+                    <input type="text" class="form-control" @bind="_zona" placeholder="cth. Jakarta Utara" />
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="button" class="btn btn-primary" @onclick="HandleCreate" disabled="@_saving">
+                    @if (_saving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-check-lg me-1"></i>
+                    }
+                    Simpan Pengiriman
+                </button>
+                <button type="button" class="btn btn-outline-secondary ms-2" @onclick="ToggleCreate">Batal</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── List table ── *@
+<div class="card">
+    <div class="card-header fw-semibold">Semua Pengiriman Motor</div>
+    <div class="card-body p-0">
+        @if (_list is null)
+        {
+            <div class="p-3 text-muted">
+                <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+            </div>
+        }
+        else if (_list.Count == 0)
+        {
+            <div class="p-3 text-muted">Belum ada pengiriman yang terdaftar.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>No. Penjualan</th>
+                            <th>No. Mesin</th>
+                            <th>Driver 1</th>
+                            <th>Driver 2</th>
+                            <th>Tgl Kirim</th>
+                            <th>Zona</th>
+                            <th>Dibuat Oleh</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _list)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@NoPenjualan(item.RegistrasiPenjualanId)</td>
+                                <td class="font-monospace small">@item.NoMesin</td>
+                                <td>@KaryawanName(item.Driver1Id)</td>
+                                <td>@(item.Driver2Id.HasValue ? KaryawanName(item.Driver2Id.Value) : "—")</td>
+                                <td>@item.DeliveryDate.ToString("dd/MM/yyyy")</td>
+                                <td>@(item.Zona ?? "—")</td>
+                                <td class="small text-muted">@item.CreatedBy</td>
+                                <td class="text-end">
+                                    <span class="text-muted small">@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<PengirimanMotorDto>?      _list;
+    private List<RegistrasiPenjualanDto>?  _registrasis;
+    private List<RegistrasiPenjualanDto>?  _approvedRegistrasis;
+    private List<KaryawanDto>?             _karyawans;
+    private bool                           _showCreate;
+    private bool                           _saving;
+    private readonly List<string>          _errors = [];
+    private string?                        _notice;
+
+    // Form fields
+    private Guid      _registrasiPenjualanId;
+    private string    _noMesin      = "";
+    private Guid      _driver1Id;
+    private Guid?     _driver2Id;
+    private DateOnly  _deliveryDate = DateOnly.FromDateTime(DateTime.Today);
+    private string?   _zona;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        var listTask  = Api.GetPengirimanMotorsAsync();
+        var regTask   = Api.GetRegistrasiPenjualansAsync();
+        var karyTask  = Api.GetKaryawanAsync();
+        await Task.WhenAll(listTask, regTask, karyTask);
+        _list                = listTask.Result  ?? [];
+        _registrasis         = regTask.Result   ?? [];
+        _approvedRegistrasis = _registrasis.Where(r => r.Status == "APPROVED").ToList();
+        _karyawans           = karyTask.Result  ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _list = await Api.GetPengirimanMotorsAsync() ?? [];
+
+    // ── Actions ────────────────────────────────────────────────────────────────
+
+    private void ToggleCreate()
+    {
+        _showCreate = !_showCreate;
+        if (!_showCreate) ResetForm();
+    }
+
+    private void OnRegistrasiSelected(Guid id)
+    {
+        _registrasiPenjualanId = id;
+        var reg = _registrasis?.FirstOrDefault(r => r.Id == id);
+        _noMesin = reg?.NoMesin ?? "";
+    }
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+
+        if (_registrasiPenjualanId == Guid.Empty) { _errors.Add("Registrasi Penjualan wajib dipilih."); return; }
+        if (_driver1Id == Guid.Empty)             { _errors.Add("Driver 1 wajib dipilih."); return; }
+
+        _saving = true;
+
+        var (id, errors) = await Api.CreatePengirimanMotorAsync(
+            _registrasiPenjualanId, _noMesin, _driver1Id,
+            _driver2Id == Guid.Empty ? null : _driver2Id,
+            _deliveryDate,
+            string.IsNullOrWhiteSpace(_zona) ? null : _zona.Trim());
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = "Pengiriman berhasil dibuat.";
+        _showCreate = false;
+        ResetForm();
+        await LoadAsync();
+    }
+
+    private void ResetForm()
+    {
+        _registrasiPenjualanId = Guid.Empty;
+        _noMesin               = "";
+        _driver1Id             = Guid.Empty;
+        _driver2Id             = null;
+        _deliveryDate          = DateOnly.FromDateTime(DateTime.Today);
+        _zona                  = null;
+    }
+
+    // ── Display helpers ────────────────────────────────────────────────────────
+
+    private string NoPenjualan(Guid id)
+        => _registrasis?.FirstOrDefault(r => r.Id == id)?.NoPenjualan ?? id.ToString()[..8];
+
+    private string KaryawanName(Guid id)
+        => _karyawans?.FirstOrDefault(k => k.Id == id)?.Name ?? "—";
+}
