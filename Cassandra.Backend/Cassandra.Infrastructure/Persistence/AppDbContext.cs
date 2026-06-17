@@ -57,6 +57,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
     public DbSet<StnkReadModel> StnkReadModels => Set<StnkReadModel>();
     public DbSet<BpkbReadModel> BpkbReadModels => Set<BpkbReadModel>();
 
+    // Phase 8: Finance & Accounting
+    public DbSet<ArTransactionReadModel> ArTransactions => Set<ArTransactionReadModel>();
+    public DbSet<ApTransactionReadModel> ApTransactions => Set<ApTransactionReadModel>();
+    public DbSet<CashOutTransactionReadModel> CashOutTransactions => Set<CashOutTransactionReadModel>();
+    public DbSet<FinanceCounterReadModel> FinanceCounters => Set<FinanceCounterReadModel>();
+
     // Phase 5: Inventory & Stock
     public DbSet<SoReadModel> SoReadModels => Set<SoReadModel>();
     public DbSet<SoItemReadModel> SoItemReadModels => Set<SoItemReadModel>();
@@ -615,6 +621,68 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
             e.Property(x => x.UpdatedBy).HasMaxLength(100);
             e.HasIndex(x => x.StnkId).IsUnique();
             e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        // ── Phase 8: Finance & Accounting ──────────────────────────────────────
+
+        builder.Entity<ArTransactionReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.TransactionType).HasMaxLength(30).IsRequired();
+            e.Property(x => x.ReferenceNumber).HasMaxLength(100).IsRequired();
+            e.Property(x => x.TotalAmount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.RemainingAmount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+            e.OwnsMany(x => x.Payments, p =>
+            {
+                p.WithOwner().HasForeignKey("ArTransactionId");
+                p.Property<Guid>("ArTransactionId");
+                p.HasKey("ArTransactionId", nameof(ArPaymentEntryReadModel.PaymentNo));
+                p.Property(x => x.Amount).HasColumnType("numeric(18,2)");
+                p.Property(x => x.PaymentMethod).HasMaxLength(50).IsRequired();
+                p.Property(x => x.FInvoiceId).HasMaxLength(50).IsRequired();
+                p.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            });
+        });
+
+        builder.Entity<ApTransactionReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.TransactionType).HasMaxLength(30).IsRequired();
+            e.Property(x => x.NoRangka).HasMaxLength(100).IsRequired();
+            e.Property(x => x.TotalAmount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.RemainingAmount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+            e.OwnsMany(x => x.Payments, p =>
+            {
+                p.WithOwner().HasForeignKey("ApTransactionId");
+                p.Property<Guid>("ApTransactionId");
+                p.HasKey("ApTransactionId", nameof(ApPaymentEntryReadModel.PaymentNo));
+                p.Property(x => x.Amount).HasColumnType("numeric(18,2)");
+                p.Property(x => x.PaymentMethod).HasMaxLength(50).IsRequired();
+                p.Property(x => x.FInvoiceId).HasMaxLength(50).IsRequired();
+                p.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            });
+        });
+
+        builder.Entity<CashOutTransactionReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.TransactionType).HasMaxLength(30).IsRequired();
+            e.Property(x => x.Amount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.DfAmount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.PaymentMethod).HasMaxLength(50).IsRequired();
+            e.Property(x => x.FInvoiceId).HasMaxLength(50).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<FinanceCounterReadModel>(e =>
+        {
+            e.HasKey(x => x.DealerId);
+            // No global query filter — keyed by DealerId, not dealer-scoped content
         });
     }
 }

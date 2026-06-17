@@ -1,4 +1,6 @@
 using Cassandra.Application.Commands.RegistrasiPenjualan.CreateRegistrasiPenjualan;
+using Cassandra.Application.Contracts.ArTransaction;
+using Cassandra.Domain.ArTransaction;
 using Cassandra.Application.Contracts.AlokasiDiskon;
 using Cassandra.Application.Contracts.DaftarHargaLeasing;
 using Cassandra.Application.Contracts.Dealers;
@@ -120,6 +122,7 @@ public class CreateRegistrasiPenjualanCommandHandlerTests
             dhlQuery,
             discountQuery,
             alokasiQuery,
+            new FakeArTransactionRepository(),
             new FakeCurrentDealer(DealerId));
     }
 
@@ -535,5 +538,14 @@ public class CreateRegistrasiPenjualanCommandHandlerTests
         public Guid  DealerId      => dealerId;
         public Guid? DealerIdOrNull => dealerId;
         public bool  IsSuperAdmin  => false;
+    }
+
+    private sealed class FakeArTransactionRepository : IArTransactionRepository
+    {
+        public Task<Domain.ArTransaction.ArTransaction?> GetByIdAsync(ArTransactionId id, CancellationToken ct = default)
+            => Task.FromResult<Domain.ArTransaction.ArTransaction?>(null);
+
+        public Task SaveAsync(Domain.ArTransaction.ArTransaction arTransaction, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }

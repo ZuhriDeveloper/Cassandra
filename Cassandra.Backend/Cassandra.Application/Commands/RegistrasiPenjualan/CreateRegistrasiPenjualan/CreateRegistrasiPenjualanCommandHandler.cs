@@ -1,4 +1,5 @@
 using Cassandra.Application.Contracts.AlokasiDiskon;
+using Cassandra.Application.Contracts.ArTransaction;
 using Cassandra.Application.Contracts.DaftarHargaLeasing;
 using Cassandra.Application.Contracts.Dealers;
 using Cassandra.Application.Contracts.Discount;
@@ -9,6 +10,7 @@ using Cassandra.Application.Contracts.Mediator;
 using Cassandra.Application.Contracts.RegistrasiPenjualan;
 using Cassandra.Application.Contracts.Stock;
 using Cassandra.Application.DTOs.Mediator;
+using Cassandra.Domain.ArTransaction;
 using Cassandra.Domain.Common;
 using Cassandra.Domain.Karyawan;
 using Cassandra.Domain.Kios;
@@ -34,6 +36,7 @@ public class CreateRegistrasiPenjualanCommandHandler(
     IDaftarHargaLeasingQueryRepository dhlQueryRepo,
     IDiscountQueryRepository           discountQueryRepo,
     IAlokasiDiskonQueryRepository      alokasiDiskonQueryRepo,
+    IArTransactionRepository           arTransactionRepo,
     ICurrentDealer                     currentDealer)
 {
     public async Task<Guid> HandleAsync(CreateRegistrasiPenjualanCommand command, CancellationToken ct = default)
@@ -253,6 +256,49 @@ public class CreateRegistrasiPenjualanCommandHandler(
             dealerId);
 
         await registrasiRepo.SaveAsync(reg, ct);
+
+        // ── Create AR transaction(s) based on MetodePenjualan ─────────────────
+        if (command.MetodePenjualan == MetodePenjualanConstants.CASH)
+        {
+            var ar = Domain.ArTransaction.ArTransaction.Create(
+                ArTransactionId.New(),
+                Domain.ArTransaction.ArTransaction.PENJUALAN,
+                reg.Id.Value,
+                reg.NoPenjualan,
+                command.Total,
+                command.CreatedBy,
+                dealerId);
+            await arTransactionRepo.SaveAsync(ar, ct);
+        }
+        else // CREDIT
+        {
+            if (command.AmbilUang > 0)
+            {
+                var arAmbil = Domain.ArTransaction.ArTransaction.Create(
+                    ArTransactionId.New(),
+                    Domain.ArTransaction.ArTransaction.AMBIL_UANG,
+                    reg.Id.Value,
+                    reg.NoPenjualan,
+                    command.AmbilUang,
+                    command.CreatedBy,
+                    dealerId);
+                await arTransactionRepo.SaveAsync(arAmbil, ct);
+            }
+            var creditAmount = command.Total - command.AmbilUang;
+            if (creditAmount > 0)
+            {
+                var arCredit = Domain.ArTransaction.ArTransaction.Create(
+                    ArTransactionId.New(),
+                    Domain.ArTransaction.ArTransaction.PENJUALAN_CREDIT,
+                    reg.Id.Value,
+                    reg.NoPenjualan,
+                    creditAmount,
+                    command.CreatedBy,
+                    dealerId);
+                await arTransactionRepo.SaveAsync(arCredit, ct);
+            }
+        }
+
         return reg.Id.Value;
     }
 }

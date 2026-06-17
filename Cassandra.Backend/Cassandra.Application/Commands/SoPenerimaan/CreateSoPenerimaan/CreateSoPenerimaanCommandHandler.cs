@@ -1,10 +1,15 @@
+using Cassandra.Application.Contracts.CashOutTransaction;
 using Cassandra.Application.Contracts.Dealers;
+using Cassandra.Application.Contracts.Finance;
 using Cassandra.Application.Contracts.So;
 using Cassandra.Application.Contracts.SoPenerimaan;
 using Cassandra.Application.Contracts.Stock;
+using Cassandra.Domain.CashOutTransaction;
 using Cassandra.Domain.Common;
+using Cassandra.Domain.So;
 using Cassandra.Domain.SoPenerimaan;
 using Cassandra.Domain.Stock;
+using Domain = Cassandra.Domain;
 
 namespace Cassandra.Application.Commands.SoPenerimaan.CreateSoPenerimaan;
 
@@ -14,6 +19,8 @@ public class CreateSoPenerimaanCommandHandler(
     IStockRepository stockRepository,
     IStockQueryRepository stockQueryRepository,
     ISoQueryRepository soQueryRepository,
+    ICashOutTransactionRepository cashOutRepo,
+    IFinanceCounter financeCounter,
     ICurrentDealer currentDealer)
 {
     public async Task<Guid> HandleAsync(CreateSoPenerimaanCommand command, CancellationToken ct = default)
@@ -76,6 +83,31 @@ public class CreateSoPenerimaanCommandHandler(
 
         // 6. Save SOPenerimaan
         await repository.SaveAsync(soPenerimaan, ct);
+
+        // 7. Create CashOut transaction for SO payment
+        var soDto = await soQueryRepository.GetByIdAsync(command.SoId, ct);
+        if (soDto is not null && soDto.TotalAmount > 0)
+        {
+            var transType = soDto.PaymentType == SoPaymentType.CASH
+                ? Domain.CashOutTransaction.CashOutTransaction.FSO_CASH
+                : Domain.CashOutTransaction.CashOutTransaction.FSO_DF;
+            var fInvoiceId = await financeCounter.GetNextFInvoiceIdAsync(ct);
+            var cashOut = Domain.CashOutTransaction.CashOutTransaction.Create(
+                CashOutTransactionId.New(),
+                transType,
+                command.SoId,
+                null,
+                soDto.TotalAmount,
+                0m,
+                0,
+                DateTime.UtcNow,
+                "TRANSFER",
+                fInvoiceId,
+                command.CreatedBy,
+                dealerId);
+            await cashOutRepo.SaveAsync(cashOut, ct);
+        }
+
         return soPenerimaan.Id.Value;
     }
 }

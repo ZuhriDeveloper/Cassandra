@@ -175,6 +175,94 @@ namespace Cassandra.Infrastructure.Migrations
                     b.ToTable("AlokasiDiskonReadModels");
                 });
 
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.ApTransactionReadModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("DealerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("NoRangka")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("RemainingAmount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("StnkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ApTransactions");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.ArTransactionReadModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("DealerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("ReferenceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReferenceNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("RemainingAmount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ArTransactions");
+                });
+
             modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.BiayaBiroJasaItemReadModel", b =>
                 {
                     b.Property<Guid>("BiayaBiroJasaId")
@@ -421,6 +509,64 @@ namespace Cassandra.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("CabangLeasingReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.CashOutTransactionReadModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("DealerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("DfAmount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("FInvoiceId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("SoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SoReturId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TotalHariDf")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CashOutTransactions");
                 });
 
             modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.DaftarHargaLeasingItemReadModel", b =>
@@ -706,6 +852,20 @@ namespace Cassandra.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("ExpenseTypeReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.FinanceCounterReadModel", b =>
+                {
+                    b.Property<Guid>("DealerId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("NextSequence")
+                        .HasColumnType("integer");
+
+                    b.HasKey("DealerId");
+
+                    b.ToTable("FinanceCounters");
                 });
 
             modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.GlobalLeasingReadModel", b =>
@@ -2366,6 +2526,96 @@ namespace Cassandra.Infrastructure.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.ApTransactionReadModel", b =>
+                {
+                    b.OwnsMany("Cassandra.Infrastructure.Persistence.Projections.ApPaymentEntryReadModel", "Payments", b1 =>
+                        {
+                            b1.Property<Guid>("ApTransactionId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("PaymentNo")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("PaymentNo"));
+
+                            b1.Property<decimal>("Amount")
+                                .HasColumnType("numeric(18,2)");
+
+                            b1.Property<string>("CreatedBy")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)");
+
+                            b1.Property<string>("FInvoiceId")
+                                .IsRequired()
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)");
+
+                            b1.Property<DateTime>("PaymentDate")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<string>("PaymentMethod")
+                                .IsRequired()
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)");
+
+                            b1.HasKey("ApTransactionId", "PaymentNo");
+
+                            b1.ToTable("ApPaymentEntryReadModel");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ApTransactionId");
+                        });
+
+                    b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.ArTransactionReadModel", b =>
+                {
+                    b.OwnsMany("Cassandra.Infrastructure.Persistence.Projections.ArPaymentEntryReadModel", "Payments", b1 =>
+                        {
+                            b1.Property<Guid>("ArTransactionId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("PaymentNo")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("PaymentNo"));
+
+                            b1.Property<decimal>("Amount")
+                                .HasColumnType("numeric(18,2)");
+
+                            b1.Property<string>("CreatedBy")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)");
+
+                            b1.Property<string>("FInvoiceId")
+                                .IsRequired()
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)");
+
+                            b1.Property<DateTime>("PaymentDate")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<string>("PaymentMethod")
+                                .IsRequired()
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)");
+
+                            b1.HasKey("ArTransactionId", "PaymentNo");
+
+                            b1.ToTable("ArPaymentEntryReadModel");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ArTransactionId");
+                        });
+
+                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

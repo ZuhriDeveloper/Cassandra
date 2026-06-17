@@ -1,4 +1,13 @@
+using Cassandra.Application.Commands.ApTransaction.CreateApTransaction;
+using Cassandra.Application.Commands.ApTransaction.RecordApPayment;
+using Cassandra.Application.Commands.ArTransaction.CreateArTransaction;
+using Cassandra.Application.Commands.ArTransaction.RecordArPayment;
 using Cassandra.Application.Commands.Bpkb.HandoverBpkb;
+using Cassandra.Application.Commands.CashOutTransaction.CreateCashOutTransaction;
+using Cassandra.Application.Queries.ApTransaction;
+using Cassandra.Application.Queries.ArTransaction;
+using Cassandra.Application.Queries.CashOutTransaction;
+using Cassandra.Application.Queries.Finance;
 using Cassandra.Application.Commands.Bpkb.ReceiveBpkb;
 using Cassandra.Application.Commands.Stnk.CreateStnk;
 using Cassandra.Application.Commands.Stnk.HandoverStnk;
@@ -350,6 +359,25 @@ public static class DependencyInjection
         services.AddScoped<ReceiveBpkbCommandHandler>();
         services.AddScoped<HandoverBpkbCommandHandler>();
         services.AddScoped<GetBpkbsQueryHandler>();
+
+        // Phase 8: Finance & Accounting
+
+        // ArTransaction
+        services.AddScoped<CreateArTransactionCommandHandler>();
+        services.AddScoped<RecordArPaymentCommandHandler>();
+        services.AddScoped<GetArTransactionsQueryHandler>();
+
+        // ApTransaction
+        services.AddScoped<CreateApTransactionCommandHandler>();
+        services.AddScoped<RecordApPaymentCommandHandler>();
+        services.AddScoped<GetApTransactionsQueryHandler>();
+
+        // CashOutTransaction
+        services.AddScoped<CreateCashOutTransactionCommandHandler>();
+        services.AddScoped<GetCashOutTransactionsQueryHandler>();
+
+        // Finance
+        services.AddScoped<GetFInvoicesQueryHandler>();
 
         // Validators (all assemblies scanned from this project)
         services.AddValidatorsFromAssemblyContaining<LoginCommandHandler>();

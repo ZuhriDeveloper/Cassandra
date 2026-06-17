@@ -1,11 +1,14 @@
 using Cassandra.Application.Commands.SoPenerimaan.CreateSoPenerimaan;
+using Cassandra.Application.Contracts.CashOutTransaction;
 using Cassandra.Application.Contracts.Dealers;
+using Cassandra.Application.Contracts.Finance;
 using Cassandra.Application.Contracts.So;
 using Cassandra.Application.Contracts.SoPenerimaan;
 using Cassandra.Application.Contracts.Stock;
 using Cassandra.Application.DTOs.So;
 using Cassandra.Application.DTOs.SoPenerimaan;
 using Cassandra.Application.DTOs.Stock;
+using Cassandra.Domain.CashOutTransaction;
 using Cassandra.Domain.Common;
 using Cassandra.Domain.SoPenerimaan;
 using Cassandra.Domain.Stock;
@@ -37,7 +40,8 @@ public class CreateSoPenerimaanCommandHandlerTests
         var dealer = new FakeCurrentDealer(DealerId);
 
         var handler = new CreateSoPenerimaanCommandHandler(
-            repo, queryRepo, stockRepo, stockQueryRepo, soQueryRepo, dealer);
+            repo, queryRepo, stockRepo, stockQueryRepo, soQueryRepo,
+            new FakeCashOutTransactionRepository(), new FakeFinanceCounter(), dealer);
 
         var id = await handler.HandleAsync(DefaultCommand(), TestContext.Current.CancellationToken);
 
@@ -58,7 +62,8 @@ public class CreateSoPenerimaanCommandHandlerTests
         var dealer = new FakeCurrentDealer(DealerId);
 
         var handler = new CreateSoPenerimaanCommandHandler(
-            repo, queryRepo, stockRepo, stockQueryRepo, soQueryRepo, dealer);
+            repo, queryRepo, stockRepo, stockQueryRepo, soQueryRepo,
+            new FakeCashOutTransactionRepository(), new FakeFinanceCounter(), dealer);
 
         await Assert.ThrowsAsync<DomainException>(() =>
             handler.HandleAsync(DefaultCommand(), TestContext.Current.CancellationToken));
@@ -75,7 +80,8 @@ public class CreateSoPenerimaanCommandHandlerTests
         var dealer = new FakeCurrentDealer(DealerId);
 
         var handler = new CreateSoPenerimaanCommandHandler(
-            repo, queryRepo, stockRepo, stockQueryRepo, soQueryRepo, dealer);
+            repo, queryRepo, stockRepo, stockQueryRepo, soQueryRepo,
+            new FakeCashOutTransactionRepository(), new FakeFinanceCounter(), dealer);
 
         await Assert.ThrowsAsync<DomainException>(() =>
             handler.HandleAsync(DefaultCommand(), TestContext.Current.CancellationToken));
@@ -92,7 +98,8 @@ public class CreateSoPenerimaanCommandHandlerTests
         var dealer = new FakeCurrentDealer(DealerId);
 
         var handler = new CreateSoPenerimaanCommandHandler(
-            repo, queryRepo, stockRepo, stockQueryRepo, soQueryRepo, dealer);
+            repo, queryRepo, stockRepo, stockQueryRepo, soQueryRepo,
+            new FakeCashOutTransactionRepository(), new FakeFinanceCounter(), dealer);
 
         await Assert.ThrowsAsync<DomainException>(() =>
             handler.HandleAsync(DefaultCommand(), TestContext.Current.CancellationToken));
@@ -196,5 +203,20 @@ public class CreateSoPenerimaanCommandHandlerTests
         public Guid DealerId => dealerId;
         public Guid? DealerIdOrNull => dealerId;
         public bool IsSuperAdmin => false;
+    }
+
+    private sealed class FakeCashOutTransactionRepository : ICashOutTransactionRepository
+    {
+        public Task<Domain.CashOutTransaction.CashOutTransaction?> GetByIdAsync(CashOutTransactionId id, CancellationToken ct = default)
+            => Task.FromResult<Domain.CashOutTransaction.CashOutTransaction?>(null);
+
+        public Task SaveAsync(Domain.CashOutTransaction.CashOutTransaction cashOutTransaction, CancellationToken ct = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class FakeFinanceCounter : IFinanceCounter
+    {
+        public Task<string> GetNextFInvoiceIdAsync(CancellationToken ct = default)
+            => Task.FromResult("INV202506000001");
     }
 }

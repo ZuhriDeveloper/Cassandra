@@ -1,6 +1,11 @@
 using Cassandra.Application.Commands.Stnk.ReceiveStnk;
+using Cassandra.Application.Contracts.ApTransaction;
+using Cassandra.Application.Contracts.Dealers;
+using Cassandra.Application.Contracts.RegistrasiPenjualan;
 using Cassandra.Application.Contracts.Stnk;
+using Cassandra.Application.DTOs.RegistrasiPenjualan;
 using Cassandra.Application.DTOs.Stnk;
+using Cassandra.Domain.ApTransaction;
 using Cassandra.Domain.Common;
 using Cassandra.Domain.Stnk;
 
@@ -38,7 +43,7 @@ public class ReceiveStnkCommandHandlerTests
     {
         var stnk = BuildProcessedStnk();
         var repo = new FakeStnkRepository(stnk);
-        var handler = new ReceiveStnkCommandHandler(repo);
+        var handler = new ReceiveStnkCommandHandler(repo, new FakeApTransactionRepository(), new FakeRegistrasiPenjualanQueryRepository(), new FakeCurrentDealer());
 
         await handler.HandleAsync(DefaultCommand(stnk.Id.Value), TestContext.Current.CancellationToken);
 
@@ -50,7 +55,7 @@ public class ReceiveStnkCommandHandlerTests
     public async Task HandleAsync_Throws_WhenStnkNotFound()
     {
         var repo = new FakeStnkRepository(null);
-        var handler = new ReceiveStnkCommandHandler(repo);
+        var handler = new ReceiveStnkCommandHandler(repo, new FakeApTransactionRepository(), new FakeRegistrasiPenjualanQueryRepository(), new FakeCurrentDealer());
 
         await Assert.ThrowsAsync<DomainException>(() =>
             handler.HandleAsync(DefaultCommand(Guid.NewGuid()), TestContext.Current.CancellationToken));
@@ -69,7 +74,7 @@ public class ReceiveStnkCommandHandlerTests
             DealerId);
 
         var repo = new FakeStnkRepository(stnk);
-        var handler = new ReceiveStnkCommandHandler(repo);
+        var handler = new ReceiveStnkCommandHandler(repo, new FakeApTransactionRepository(), new FakeRegistrasiPenjualanQueryRepository(), new FakeCurrentDealer());
 
         await Assert.ThrowsAsync<DomainException>(() =>
             handler.HandleAsync(DefaultCommand(stnk.Id.Value), TestContext.Current.CancellationToken));
@@ -89,5 +94,33 @@ public class ReceiveStnkCommandHandlerTests
             Saved = stnk;
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class FakeApTransactionRepository : IApTransactionRepository
+    {
+        public Task<Domain.ApTransaction.ApTransaction?> GetByIdAsync(ApTransactionId id, CancellationToken ct = default)
+            => Task.FromResult<Domain.ApTransaction.ApTransaction?>(null);
+
+        public Task SaveAsync(Domain.ApTransaction.ApTransaction apTransaction, CancellationToken ct = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class FakeRegistrasiPenjualanQueryRepository : IRegistrasiPenjualanQueryRepository
+    {
+        public Task<IReadOnlyList<RegistrasiPenjualanDto>> GetAllAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<RegistrasiPenjualanDto>>([]);
+
+        public Task<RegistrasiPenjualanDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult<RegistrasiPenjualanDto?>(null);
+
+        public Task<bool> NoPenjualanExistsAsync(string noPenjualan, CancellationToken ct = default)
+            => Task.FromResult(false);
+    }
+
+    private sealed class FakeCurrentDealer : ICurrentDealer
+    {
+        public Guid DealerId => Guid.NewGuid();
+        public Guid? DealerIdOrNull => DealerId;
+        public bool IsSuperAdmin => false;
     }
 }

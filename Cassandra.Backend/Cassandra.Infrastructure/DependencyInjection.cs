@@ -206,6 +206,23 @@ public static class DependencyInjection
         services.AddScoped<Application.Contracts.Bpkb.IBpkbRepository, Bpkb.BpkbRepository>();
         services.AddScoped<Application.Contracts.Bpkb.IBpkbQueryRepository, Bpkb.BpkbQueryRepository>();
 
+        // ── Phase 8: Finance & Accounting ──────────────────────────────────────
+
+        // ── ArTransaction ─────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.ArTransaction.IArTransactionRepository, ArTransaction.ArTransactionRepository>();
+        services.AddScoped<Application.Contracts.ArTransaction.IArTransactionQueryRepository, ArTransaction.ArTransactionQueryRepository>();
+
+        // ── ApTransaction ─────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.ApTransaction.IApTransactionRepository, ApTransaction.ApTransactionRepository>();
+        services.AddScoped<Application.Contracts.ApTransaction.IApTransactionQueryRepository, ApTransaction.ApTransactionQueryRepository>();
+
+        // ── CashOutTransaction ────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.CashOutTransaction.ICashOutTransactionRepository, CashOutTransaction.CashOutTransactionRepository>();
+        services.AddScoped<Application.Contracts.CashOutTransaction.ICashOutTransactionQueryRepository, CashOutTransaction.CashOutTransactionQueryRepository>();
+
+        // ── Finance Counter ───────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Finance.IFinanceCounter, Finance.FinanceCounterService>();
+
         return services;
     }
 }

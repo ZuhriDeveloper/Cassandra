@@ -1,4 +1,7 @@
+using Cassandra.Domain.ApTransaction.Events;
+using Cassandra.Domain.ArTransaction.Events;
 using Cassandra.Domain.Bpkb.Events;
+using Cassandra.Domain.CashOutTransaction.Events;
 using Cassandra.Domain.Stnk.Events;
 using Cassandra.Domain.AlokasiDiskon.Events;
 using Cassandra.Domain.PengirimanMotor.Events;
@@ -241,6 +244,21 @@ public static class EventTypeRegistry
         [nameof(BpkbCreated)]    = typeof(BpkbCreated),
         [nameof(BpkbReceived)]   = typeof(BpkbReceived),
         [nameof(BpkbHandedOver)] = typeof(BpkbHandedOver),
+
+        // Phase 8: Finance & Accounting
+
+        // ArTransaction (dealer-scoped) events
+        [nameof(ArTransactionCreated)]         = typeof(ArTransactionCreated),
+        [nameof(ArTransactionPaymentRecorded)] = typeof(ArTransactionPaymentRecorded),
+        [nameof(ArTransactionClosed)]          = typeof(ArTransactionClosed),
+
+        // ApTransaction (dealer-scoped) events
+        [nameof(ApTransactionCreated)]         = typeof(ApTransactionCreated),
+        [nameof(ApTransactionPaymentRecorded)] = typeof(ApTransactionPaymentRecorded),
+        [nameof(ApTransactionClosed)]          = typeof(ApTransactionClosed),
+
+        // CashOutTransaction (dealer-scoped) events
+        [nameof(CashOutTransactionCreated)] = typeof(CashOutTransactionCreated),
     };
 
     public static Type Resolve(string eventType) =>
