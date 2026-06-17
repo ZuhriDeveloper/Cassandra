@@ -1,0 +1,596 @@
+@page "/dealer/stnk"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>STNK — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">STNK</h4>
+    <AuthorizeView Roles="Admin,Sales">
+        <button class="btn btn-primary" @onclick="ToggleCreate">
+            <i class="bi bi-plus-lg me-1"></i>
+            @(_showCreate ? "Tutup Form" : "Buat STNK")
+        </button>
+    </AuthorizeView>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+@* ── Create form ── *@
+@if (_showCreate)
+{
+    <div class="card mb-4">
+        <div class="card-header fw-semibold">
+            <i class="bi bi-plus-circle me-1"></i> Buat STNK Baru
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Registrasi Penjualan <span class="text-danger">*</span></label>
+                        <InputSelect class="form-select" @bind-Value="_registrasiPenjualanId">
+                            <option value="">— Pilih Penjualan —</option>
+                            @foreach (var r in (_registrasis ?? []).Where(r => r.Status == "SENT"))
+                            {
+                                <option value="@r.Id">@r.NoPenjualan — @r.NamaCustomer — @r.NoMesin</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tanggal Faktur <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control"
+                               value="@_fakturDate.ToString("yyyy-MM-dd")"
+                               @onchange="e => _fakturDate = DateOnly.Parse(e.Value?.ToString() ?? _fakturDate.ToString())" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Nama Faktur <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" @bind="_fakturName" placeholder="Nama pada faktur kendaraan" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Alamat Faktur <span class="text-danger">*</span></label>
+                        <textarea class="form-control" rows="2" @bind="_fakturAddress" placeholder="Alamat pada faktur kendaraan"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-2">
+                <button type="button" class="btn btn-primary" @onclick="HandleCreate" disabled="@_saving">
+                    @if (_saving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-check-lg me-1"></i>
+                    }
+                    Simpan STNK
+                </button>
+                <button type="button" class="btn btn-outline-secondary ms-2" @onclick="ToggleCreate">Batal</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── List table ── *@
+<div class="card">
+    <div class="card-header fw-semibold">Semua STNK</div>
+    <div class="card-body p-0">
+        @if (_list is null)
+        {
+            <div class="p-3 text-muted">
+                <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+            </div>
+        }
+        else if (_list.Count == 0)
+        {
+            <div class="p-3 text-muted">Belum ada data STNK.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>No. Penjualan</th>
+                            <th>Nama Customer</th>
+                            <th>Tgl Faktur</th>
+                            <th>Biro</th>
+                            <th>No. Polisi</th>
+                            <th>No. STNK</th>
+                            <th>Status</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _list)
+                        {
+                            var reg = _registrasis?.FirstOrDefault(r => r.Id == item.RegistrasiPenjualanId);
+                            <tr>
+                                <td class="fw-semibold">@(reg?.NoPenjualan ?? "—")</td>
+                                <td>@(reg?.NamaCustomer ?? "—")</td>
+                                <td>@item.FakturDate.ToString("dd/MM/yyyy")</td>
+                                <td class="small">@BiroName(item.BiroId)</td>
+                                <td class="font-monospace small">@(item.PlateNumber ?? "—")</td>
+                                <td class="font-monospace small">@(item.StnkNumber ?? "—")</td>
+                                <td>@StnkStatusBadge(item.Status)</td>
+                                <td class="text-end">
+                                    <AuthorizeView Roles="Admin,Sales">
+                                        <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                            @if (item.Status == "RECEIVE_FAKTUR")
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary"
+                                                        title="Proses"
+                                                        @onclick="() => StartProcess(item.Id)">
+                                                    <i class="bi bi-arrow-right-circle"></i> Proses
+                                                </button>
+                                            }
+                                            @if (item.Status == "PROCESS")
+                                            {
+                                                <button class="btn btn-sm btn-outline-success"
+                                                        title="Terima"
+                                                        @onclick="() => StartReceive(item.Id)">
+                                                    <i class="bi bi-inbox"></i> Terima
+                                                </button>
+                                            }
+                                            @if (item.Status == "RECEIVE")
+                                            {
+                                                <button class="btn btn-sm btn-outline-info"
+                                                        title="Serah Terima"
+                                                        @onclick="() => StartHandover(item.Id)">
+                                                    <i class="bi bi-box-arrow-right"></i> Serah Terima
+                                                </button>
+                                            }
+                                        </div>
+                                    </AuthorizeView>
+                                </td>
+                            </tr>
+                            @* ── Inline action rows ── *@
+                            @if (_actionRowId == item.Id && _actionType == ActionProcess)
+                            {
+                                <tr class="table-warning">
+                                    <td colspan="8">
+                                        <div class="p-3">
+                                            <h6 class="fw-semibold mb-3">
+                                                <i class="bi bi-arrow-right-circle me-1"></i> Proses STNK
+                                            </h6>
+                                            <div class="row g-3 align-items-end">
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Tanggal Proses <span class="text-danger">*</span></label>
+                                                    <input type="date" class="form-control"
+                                                           value="@_processDate.ToString("yyyy-MM-dd")"
+                                                           @onchange="e => _processDate = DateOnly.Parse(e.Value?.ToString() ?? _processDate.ToString())" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Biro <span class="text-danger">*</span></label>
+                                                    <InputSelect class="form-select" @bind-Value="_processBiroId">
+                                                        <option value="">— Pilih Biro —</option>
+                                                        @foreach (var b in (_biros ?? []).Where(b => b.IsActive))
+                                                        {
+                                                            <option value="@b.Id">@b.Name</option>
+                                                        }
+                                                    </InputSelect>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">No. Invoice <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control" @bind="_processInvoiceNumber" placeholder="No. invoice" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <button type="button" class="btn btn-warning" @onclick="() => HandleProcess(item.Id)" disabled="@_saving">
+                                                        @if (_saving)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                                        }
+                                                        Simpan Proses
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-secondary ms-2" @onclick="CollapseAction">Batal</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (_actionRowId == item.Id && _actionType == ActionReceive)
+                            {
+                                <tr class="table-success">
+                                    <td colspan="8">
+                                        <div class="p-3">
+                                            <h6 class="fw-semibold mb-3">
+                                                <i class="bi bi-inbox me-1"></i> Terima STNK
+                                            </h6>
+                                            <div class="row g-3">
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Tanggal Terima <span class="text-danger">*</span></label>
+                                                    <input type="date" class="form-control"
+                                                           value="@_receiveDate.ToString("yyyy-MM-dd")"
+                                                           @onchange="e => _receiveDate = DateOnly.Parse(e.Value?.ToString() ?? _receiveDate.ToString())" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">No. Polisi <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control font-monospace" @bind="_receivePlateNumber" placeholder="cth. B 1234 XYZ" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Biro <span class="text-danger">*</span></label>
+                                                    <InputSelect class="form-select" @bind-Value="_receiveBiroId">
+                                                        <option value="">— Pilih Biro —</option>
+                                                        @foreach (var b in (_biros ?? []).Where(b => b.IsActive))
+                                                        {
+                                                            <option value="@b.Id">@b.Name</option>
+                                                        }
+                                                    </InputSelect>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">No. STNK <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control font-monospace" @bind="_receiveStnkNumber" placeholder="No. STNK" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">No. Invoice <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control" @bind="_receiveInvoiceNumber" placeholder="No. invoice" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Wilayah <span class="text-muted small">(opsional)</span></label>
+                                                    <input type="text" class="form-control" @bind="_receiveRegion" placeholder="Wilayah" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Biaya STNK</label>
+                                                    <InputNumber class="form-control" @bind-Value="_receiveStnkCost" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Biaya Notice</label>
+                                                    <InputNumber class="form-control" @bind-Value="_receiveNoticeCost" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Biaya Progresif</label>
+                                                    <InputNumber class="form-control" @bind-Value="_receiveProgressiveCost" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Biaya BBN</label>
+                                                    <InputNumber class="form-control" @bind-Value="_receiveBbnCost" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Biaya PNBP</label>
+                                                    <InputNumber class="form-control" @bind-Value="_receivePnbpCost" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Biaya Admin</label>
+                                                    <InputNumber class="form-control" @bind-Value="_receiveAdminCost" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Biaya Lain</label>
+                                                    <InputNumber class="form-control" @bind-Value="_receiveOtherCost" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Biaya Jasa</label>
+                                                    <InputNumber class="form-control" @bind-Value="_receiveServiceCost" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Biaya PPH</label>
+                                                    <InputNumber class="form-control" @bind-Value="_receivePphCost" />
+                                                </div>
+                                                <div class="col-md-3 d-flex align-items-end">
+                                                    <div class="form-check mb-2">
+                                                        <InputCheckbox class="form-check-input" @bind-Value="_receiveIsInvoiceValid" id="invoiceValidCheck" />
+                                                        <label class="form-check-label" for="invoiceValidCheck">Invoice Valid</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-3">
+                                                <button type="button" class="btn btn-success" @onclick="() => HandleReceive(item.Id)" disabled="@_saving">
+                                                    @if (_saving)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                                    }
+                                                    Simpan Terima
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary ms-2" @onclick="CollapseAction">Batal</button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (_actionRowId == item.Id && _actionType == ActionHandover)
+                            {
+                                <tr class="table-info">
+                                    <td colspan="8">
+                                        <div class="p-3">
+                                            <h6 class="fw-semibold mb-3">
+                                                <i class="bi bi-box-arrow-right me-1"></i> Serah Terima STNK
+                                            </h6>
+                                            <div class="row g-3 align-items-end">
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Tanggal Serah Terima <span class="text-danger">*</span></label>
+                                                    <input type="date" class="form-control"
+                                                           value="@_handoverDate.ToString("yyyy-MM-dd")"
+                                                           @onchange="e => _handoverDate = DateOnly.Parse(e.Value?.ToString() ?? _handoverDate.ToString())" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Penerima <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control" @bind="_handoverReceiver" placeholder="Nama penerima STNK" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <button type="button" class="btn btn-info" @onclick="() => HandleHandover(item.Id)" disabled="@_saving">
+                                                        @if (_saving)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                                        }
+                                                        Simpan Serah Terima
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-secondary ms-2" @onclick="CollapseAction">Batal</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    // Action type constants — avoids string literals inside Razor attribute quotes
+    private const string ActionProcess  = "process";
+    private const string ActionReceive  = "receive";
+    private const string ActionHandover = "handover";
+
+    private List<StnkDto>?                  _list;
+    private List<RegistrasiPenjualanDto>?   _registrasis;
+    private List<BiroDto>?                  _biros;
+    private bool                            _showCreate;
+    private bool                            _saving;
+    private readonly List<string>           _errors = [];
+    private string?                         _notice;
+
+    // Create form
+    private Guid     _registrasiPenjualanId;
+    private DateOnly _fakturDate   = DateOnly.FromDateTime(DateTime.Today);
+    private string   _fakturName   = "";
+    private string   _fakturAddress = "";
+
+    // Inline action state — one active row at a time
+    private Guid?   _actionRowId;
+    private string? _actionType;
+
+    // Process inline fields
+    private DateOnly _processDate          = DateOnly.FromDateTime(DateTime.Today);
+    private Guid     _processBiroId;
+    private string   _processInvoiceNumber = "";
+
+    // Receive inline fields
+    private DateOnly  _receiveDate            = DateOnly.FromDateTime(DateTime.Today);
+    private string    _receivePlateNumber     = "";
+    private Guid      _receiveBiroId;
+    private string    _receiveStnkNumber      = "";
+    private decimal   _receiveStnkCost;
+    private decimal   _receiveNoticeCost;
+    private decimal   _receiveProgressiveCost;
+    private string    _receiveInvoiceNumber   = "";
+    private string?   _receiveRegion;
+    private decimal   _receiveBbnCost;
+    private decimal   _receivePnbpCost;
+    private decimal   _receiveAdminCost;
+    private decimal   _receiveOtherCost;
+    private decimal   _receiveServiceCost;
+    private decimal   _receivePphCost;
+    private bool      _receiveIsInvoiceValid;
+
+    // Handover inline fields
+    private DateOnly _handoverDate     = DateOnly.FromDateTime(DateTime.Today);
+    private string   _handoverReceiver = "";
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        var listTask = Api.GetStnksAsync();
+        var regTask  = Api.GetRegistrasiPenjualansAsync();
+        var biroTask = Api.GetBiroAsync();
+        await Task.WhenAll(listTask, regTask, biroTask);
+        _list        = listTask.Result  ?? [];
+        _registrasis = regTask.Result   ?? [];
+        _biros       = biroTask.Result  ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _list = await Api.GetStnksAsync() ?? [];
+
+    // ── Actions ────────────────────────────────────────────────────────────────
+
+    private void ToggleCreate()
+    {
+        _showCreate = !_showCreate;
+        if (!_showCreate) ResetCreateForm();
+    }
+
+    private void StartProcess(Guid rowId)
+        => ToggleAction(rowId, ActionProcess);
+
+    private void StartReceive(Guid rowId)
+        => ToggleAction(rowId, ActionReceive);
+
+    private void StartHandover(Guid rowId)
+        => ToggleAction(rowId, ActionHandover);
+
+    private void CollapseAction()
+    {
+        _actionRowId = null;
+        _actionType  = null;
+    }
+
+    private void ToggleAction(Guid rowId, string actionType)
+    {
+        if (_actionRowId == rowId && _actionType == actionType)
+        {
+            _actionRowId = null;
+            _actionType  = null;
+        }
+        else
+        {
+            _actionRowId = rowId;
+            _actionType  = actionType;
+        }
+    }
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+        if (_registrasiPenjualanId == Guid.Empty)      { _errors.Add("Registrasi Penjualan wajib dipilih."); return; }
+        if (string.IsNullOrWhiteSpace(_fakturName))    { _errors.Add("Nama Faktur wajib diisi."); return; }
+        if (string.IsNullOrWhiteSpace(_fakturAddress)) { _errors.Add("Alamat Faktur wajib diisi."); return; }
+
+        _saving = true;
+        var (id, errors) = await Api.CreateStnkAsync(
+            _registrasiPenjualanId, _fakturDate,
+            _fakturName.Trim(), _fakturAddress.Trim());
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = "STNK berhasil dibuat.";
+        _showCreate = false;
+        ResetCreateForm();
+        var regTask = Api.GetRegistrasiPenjualansAsync();
+        await LoadAsync();
+        _registrasis = await regTask ?? [];
+    }
+
+    private async Task HandleProcess(Guid stnkId)
+    {
+        _errors.Clear();
+        if (_processBiroId == Guid.Empty)                      { _errors.Add("Biro wajib dipilih."); return; }
+        if (string.IsNullOrWhiteSpace(_processInvoiceNumber))  { _errors.Add("No. Invoice wajib diisi."); return; }
+
+        _saving = true;
+        var errors = await Api.ProcessStnkAsync(stnkId, _processDate, _processBiroId, _processInvoiceNumber.Trim());
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = "STNK berhasil diproses.";
+        CollapseAction();
+        ResetProcessFields();
+        await LoadAsync();
+    }
+
+    private async Task HandleReceive(Guid stnkId)
+    {
+        _errors.Clear();
+        if (string.IsNullOrWhiteSpace(_receivePlateNumber))   { _errors.Add("No. Polisi wajib diisi."); return; }
+        if (_receiveBiroId == Guid.Empty)                     { _errors.Add("Biro wajib dipilih."); return; }
+        if (string.IsNullOrWhiteSpace(_receiveStnkNumber))    { _errors.Add("No. STNK wajib diisi."); return; }
+        if (string.IsNullOrWhiteSpace(_receiveInvoiceNumber)) { _errors.Add("No. Invoice wajib diisi."); return; }
+
+        _saving = true;
+        var errors = await Api.ReceiveStnkAsync(
+            stnkId, _receiveDate, _receivePlateNumber.Trim(),
+            _receiveBiroId, _receiveStnkNumber.Trim(),
+            _receiveStnkCost, _receiveNoticeCost, _receiveProgressiveCost,
+            _receiveInvoiceNumber.Trim(),
+            string.IsNullOrWhiteSpace(_receiveRegion) ? null : _receiveRegion.Trim(),
+            _receiveBbnCost, _receivePnbpCost, _receiveAdminCost,
+            _receiveOtherCost, _receiveServiceCost, _receivePphCost, _receiveIsInvoiceValid);
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = "STNK berhasil diterima.";
+        CollapseAction();
+        ResetReceiveFields();
+        await LoadAsync();
+    }
+
+    private async Task HandleHandover(Guid stnkId)
+    {
+        _errors.Clear();
+        if (string.IsNullOrWhiteSpace(_handoverReceiver)) { _errors.Add("Penerima wajib diisi."); return; }
+
+        _saving = true;
+        var errors = await Api.HandoverStnkAsync(stnkId, _handoverDate, _handoverReceiver.Trim());
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice = "Serah terima STNK berhasil disimpan.";
+        CollapseAction();
+        ResetHandoverFields();
+        await LoadAsync();
+    }
+
+    private void ResetCreateForm()
+    {
+        _registrasiPenjualanId = Guid.Empty;
+        _fakturDate            = DateOnly.FromDateTime(DateTime.Today);
+        _fakturName            = "";
+        _fakturAddress         = "";
+    }
+
+    private void ResetProcessFields()
+    {
+        _processDate          = DateOnly.FromDateTime(DateTime.Today);
+        _processBiroId        = Guid.Empty;
+        _processInvoiceNumber = "";
+    }
+
+    private void ResetReceiveFields()
+    {
+        _receiveDate            = DateOnly.FromDateTime(DateTime.Today);
+        _receivePlateNumber     = "";
+        _receiveBiroId          = Guid.Empty;
+        _receiveStnkNumber      = "";
+        _receiveStnkCost        = 0;
+        _receiveNoticeCost      = 0;
+        _receiveProgressiveCost = 0;
+        _receiveInvoiceNumber   = "";
+        _receiveRegion          = null;
+        _receiveBbnCost         = 0;
+        _receivePnbpCost        = 0;
+        _receiveAdminCost       = 0;
+        _receiveOtherCost       = 0;
+        _receiveServiceCost     = 0;
+        _receivePphCost         = 0;
+        _receiveIsInvoiceValid  = false;
+    }
+
+    private void ResetHandoverFields()
+    {
+        _handoverDate     = DateOnly.FromDateTime(DateTime.Today);
+        _handoverReceiver = "";
+    }
+
+    // ── Display helpers ────────────────────────────────────────────────────────
+
+    private string BiroName(Guid? id)
+        => id.HasValue ? (_biros?.FirstOrDefault(b => b.Id == id.Value)?.Name ?? "—") : "—";
+
+    private RenderFragment StnkStatusBadge(string status) => status switch
+    {
+        "RECEIVE_FAKTUR" => @<span class="badge bg-warning text-dark">RECEIVE FAKTUR</span>,
+        "PROCESS"        => @<span class="badge bg-info text-dark">PROCESS</span>,
+        "RECEIVE"        => @<span class="badge bg-primary">RECEIVE</span>,
+        "HANDOVER_STNK"  => @<span class="badge bg-success">HANDOVER</span>,
+        _                => @<span class="badge bg-secondary">@status</span>,
+    };
+}

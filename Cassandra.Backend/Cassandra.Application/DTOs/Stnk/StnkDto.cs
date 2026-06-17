@@ -1,0 +1,28 @@
+namespace Cassandra.Application.DTOs.Stnk;
+
+public record StnkDto(
+    Guid     Id,
+    Guid     RegistrasiPenjualanId,
+    string   Status,
+    DateOnly FakturDate,
+    string   FakturName,
+    string   FakturAddress,
+    DateOnly? ProcessDate,
+    Guid?    BiroId,
+    string?  InvoiceNumber,
+    string?  PlateNumber,
+    string?  StnkNumber,
+    decimal  StnkCost,
+    decimal  ProgressiveCost,
+    decimal  NoticeCost,
+    DateOnly? ReceiveDate,
+    DateOnly? HandoverDate,
+    string?  StnkReceiver,
+    string?  Region,
+    decimal  BbnCost,
+    decimal  PnbpCost,
+    decimal  AdminCost,
+    decimal  OtherCost,
+    decimal  ServiceCost,
+    decimal  PphCost,
+    bool?    IsInvoiceValid);

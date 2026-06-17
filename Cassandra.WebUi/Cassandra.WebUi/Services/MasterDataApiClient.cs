@@ -898,6 +898,71 @@ public class MasterDataApiClient(HttpClient http)
         return (result?.Id, null);
     }
 
+    // ── STNK ─────────────────────────────────────────────────────────────────────
+
+    public Task<List<StnkDto>?> GetStnksAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<StnkDto>>("api/dealer/stnk", ct);
+
+    public Task<StnkDto?> GetStnkByIdAsync(Guid id, CancellationToken ct = default)
+        => http.GetFromJsonAsync<StnkDto>($"api/dealer/stnk/{id}", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateStnkAsync(
+        Guid registrasiPenjualanId, DateOnly fakturDate, string fakturName, string fakturAddress,
+        CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/stnk",
+            new { registrasiPenjualanId, fakturDate, fakturName, fakturAddress }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateStnkResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> ProcessStnkAsync(Guid id, DateOnly processDate, Guid biroId, string invoiceNumber, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/stnk/{id}/process",
+            new { processDate, biroId, invoiceNumber }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> ReceiveStnkAsync(Guid id, DateOnly receiveDate, string plateNumber,
+        Guid biroId, string stnkNumber, decimal stnkCost, decimal noticeCost, decimal progressiveCost,
+        string invoiceNumber, string? region, decimal bbnCost, decimal pnbpCost, decimal adminCost,
+        decimal otherCost, decimal serviceCost, decimal pphCost, bool isInvoiceValid,
+        CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/stnk/{id}/receive", new {
+            receiveDate, plateNumber, biroId, stnkNumber, stnkCost, noticeCost, progressiveCost,
+            invoiceNumber, region, bbnCost, pnbpCost, adminCost, otherCost, serviceCost, pphCost, isInvoiceValid
+        }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> HandoverStnkAsync(Guid id, DateOnly handoverDate, string stnkReceiver, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/stnk/{id}/handover",
+            new { handoverDate, stnkReceiver }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── BPKB ─────────────────────────────────────────────────────────────────────
+
+    public Task<List<BpkbDto>?> GetBpkbsAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<BpkbDto>>("api/dealer/bpkb", ct);
+
+    public async Task<List<string>?> ReceiveBpkbAsync(Guid id, DateOnly receiveDate, string bpkbNumber, string bookNumber, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/bpkb/{id}/receive",
+            new { receiveDate, bpkbNumber, bookNumber }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> HandoverBpkbAsync(Guid id, DateOnly handoverDate, string receiver, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/bpkb/{id}/handover",
+            new { handoverDate, receiver }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static async Task<List<string>> ReadErrorsAsync(HttpResponseMessage r)
@@ -1087,3 +1152,20 @@ public record PengirimanMotorDto(
     Guid Driver1Id, Guid? Driver2Id, DateOnly DeliveryDate, string? Zona,
     string CreatedBy, DateTime CreatedAt);
 public record CreatePengirimanMotorResponse(Guid Id);
+
+// Phase 7 — Document Workflows
+public record StnkDto(
+    Guid Id, Guid RegistrasiPenjualanId, string Status,
+    DateOnly FakturDate, string FakturName, string FakturAddress,
+    DateOnly? ProcessDate, Guid? BiroId, string? InvoiceNumber,
+    string? PlateNumber, string? StnkNumber,
+    decimal StnkCost, decimal ProgressiveCost, decimal NoticeCost,
+    DateOnly? ReceiveDate, DateOnly? HandoverDate, string? StnkReceiver,
+    string? Region, decimal BbnCost, decimal PnbpCost, decimal AdminCost,
+    decimal OtherCost, decimal ServiceCost, decimal PphCost, bool? IsInvoiceValid);
+public record CreateStnkResponse(Guid Id);
+
+public record BpkbDto(
+    Guid Id, Guid RegistrasiPenjualanId, Guid StnkId, string Status,
+    DateOnly RequestDate, string? BpkbNumber, string? BookNumber,
+    DateOnly? ReceiveDate, DateOnly? HandoverDate, string? Receiver);

@@ -53,6 +53,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
     public DbSet<RegistrasiPenjualanReadModel> RegistrasiPenjualanReadModels => Set<RegistrasiPenjualanReadModel>();
     public DbSet<PengirimanMotorReadModel> PengirimanMotorReadModels => Set<PengirimanMotorReadModel>();
 
+    // Phase 7: Document Workflows
+    public DbSet<StnkReadModel> StnkReadModels => Set<StnkReadModel>();
+    public DbSet<BpkbReadModel> BpkbReadModels => Set<BpkbReadModel>();
+
     // Phase 5: Inventory & Stock
     public DbSet<SoReadModel> SoReadModels => Set<SoReadModel>();
     public DbSet<SoItemReadModel> SoItemReadModels => Set<SoItemReadModel>();
@@ -570,6 +574,46 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
             e.Property(x => x.NoMesin).HasMaxLength(100).IsRequired();
             e.Property(x => x.Zona).HasMaxLength(100);
             e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        // ── Phase 7: Document Workflows ────────────────────────────────────────
+
+        builder.Entity<StnkReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            e.Property(x => x.FakturName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.FakturAddress).HasMaxLength(500).IsRequired();
+            e.Property(x => x.InvoiceNumber).HasMaxLength(100);
+            e.Property(x => x.PlateNumber).HasMaxLength(20);
+            e.Property(x => x.StnkNumber).HasMaxLength(100);
+            e.Property(x => x.Region).HasMaxLength(100);
+            e.Property(x => x.StnkCost).HasColumnType("numeric(18,2)");
+            e.Property(x => x.ProgressiveCost).HasColumnType("numeric(18,2)");
+            e.Property(x => x.NoticeCost).HasColumnType("numeric(18,2)");
+            e.Property(x => x.BbnCost).HasColumnType("numeric(18,2)");
+            e.Property(x => x.PnbpCost).HasColumnType("numeric(18,2)");
+            e.Property(x => x.AdminCost).HasColumnType("numeric(18,2)");
+            e.Property(x => x.OtherCost).HasColumnType("numeric(18,2)");
+            e.Property(x => x.ServiceCost).HasColumnType("numeric(18,2)");
+            e.Property(x => x.PphCost).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => x.RegistrasiPenjualanId).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<BpkbReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            e.Property(x => x.BpkbNumber).HasMaxLength(100);
+            e.Property(x => x.BookNumber).HasMaxLength(100);
+            e.Property(x => x.Receiver).HasMaxLength(200);
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => x.StnkId).IsUnique();
             e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
         });
     }

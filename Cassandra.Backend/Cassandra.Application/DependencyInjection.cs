@@ -1,3 +1,11 @@
+using Cassandra.Application.Commands.Bpkb.HandoverBpkb;
+using Cassandra.Application.Commands.Bpkb.ReceiveBpkb;
+using Cassandra.Application.Commands.Stnk.CreateStnk;
+using Cassandra.Application.Commands.Stnk.HandoverStnk;
+using Cassandra.Application.Commands.Stnk.ProcessStnk;
+using Cassandra.Application.Commands.Stnk.ReceiveStnk;
+using Cassandra.Application.Queries.Bpkb;
+using Cassandra.Application.Queries.Stnk;
 using Cassandra.Application.Commands.Mutasi.CreateMutasi;
 using Cassandra.Application.Commands.PengirimanMotor.CreatePengirimanMotor;
 using Cassandra.Application.Commands.RegistrasiPenjualan.ApproveRegistrasiPenjualan;
@@ -328,6 +336,20 @@ public static class DependencyInjection
         // PengirimanMotor
         services.AddScoped<CreatePengirimanMotorCommandHandler>();
         services.AddScoped<GetPengirimanMotorsQueryHandler>();
+
+        // Phase 7: Document Workflows
+
+        // Stnk
+        services.AddScoped<CreateStnkCommandHandler>();
+        services.AddScoped<ProcessStnkCommandHandler>();
+        services.AddScoped<ReceiveStnkCommandHandler>();
+        services.AddScoped<HandoverStnkCommandHandler>();
+        services.AddScoped<GetStnksQueryHandler>();
+
+        // Bpkb
+        services.AddScoped<ReceiveBpkbCommandHandler>();
+        services.AddScoped<HandoverBpkbCommandHandler>();
+        services.AddScoped<GetBpkbsQueryHandler>();
 
         // Validators (all assemblies scanned from this project)
         services.AddValidatorsFromAssemblyContaining<LoginCommandHandler>();

@@ -196,6 +196,16 @@ public static class DependencyInjection
         services.AddScoped<Application.Contracts.PengirimanMotor.IPengirimanMotorRepository, PengirimanMotor.PengirimanMotorRepository>();
         services.AddScoped<Application.Contracts.PengirimanMotor.IPengirimanMotorQueryRepository, PengirimanMotor.PengirimanMotorQueryRepository>();
 
+        // ── Phase 7: Document Workflows ───────────────────────────────────────
+
+        // ── Stnk ──────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Stnk.IStnkRepository, Stnk.StnkRepository>();
+        services.AddScoped<Application.Contracts.Stnk.IStnkQueryRepository, Stnk.StnkQueryRepository>();
+
+        // ── Bpkb ──────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Bpkb.IBpkbRepository, Bpkb.BpkbRepository>();
+        services.AddScoped<Application.Contracts.Bpkb.IBpkbQueryRepository, Bpkb.BpkbQueryRepository>();
+
         return services;
     }
 }

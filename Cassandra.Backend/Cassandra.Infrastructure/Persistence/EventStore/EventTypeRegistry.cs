@@ -1,3 +1,5 @@
+using Cassandra.Domain.Bpkb.Events;
+using Cassandra.Domain.Stnk.Events;
 using Cassandra.Domain.AlokasiDiskon.Events;
 using Cassandra.Domain.PengirimanMotor.Events;
 using Cassandra.Domain.RegistrasiPenjualan.Events;
@@ -226,6 +228,19 @@ public static class EventTypeRegistry
 
         // PengirimanMotor (dealer-scoped) events
         [nameof(PengirimanMotorCreated)] = typeof(PengirimanMotorCreated),
+
+        // Phase 7: Document Workflows
+
+        // Stnk (dealer-scoped) events
+        [nameof(StnkCreated)]    = typeof(StnkCreated),
+        [nameof(StnkProcessed)]  = typeof(StnkProcessed),
+        [nameof(StnkReceived)]   = typeof(StnkReceived),
+        [nameof(StnkHandedOver)] = typeof(StnkHandedOver),
+
+        // Bpkb (dealer-scoped) events
+        [nameof(BpkbCreated)]    = typeof(BpkbCreated),
+        [nameof(BpkbReceived)]   = typeof(BpkbReceived),
+        [nameof(BpkbHandedOver)] = typeof(BpkbHandedOver),
     };
 
     public static Type Resolve(string eventType) =>
