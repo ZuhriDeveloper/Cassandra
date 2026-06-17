@@ -1,0 +1,475 @@
+@page "/dealer/mutasi"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Mutasi Stok — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Mutasi Stok</h4>
+    <button class="btn btn-primary" @onclick="ToggleCreate">
+        <i class="bi bi-plus-lg me-1"></i>
+        @(_showCreate ? "Tutup Form" : "Tambah Mutasi")
+    </button>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+@* ── Create form ── *@
+@if (_showCreate)
+{
+    <div class="card mb-4">
+        <div class="card-header fw-semibold">
+            <i class="bi bi-plus-circle me-1"></i> Tambah Mutasi Stok Baru
+        </div>
+        <div class="card-body">
+
+            @* Header *@
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label class="form-label">No. Mutasi <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" @bind="_mutasiNumber" placeholder="cth. MUT-2025-001" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tanggal Mutasi <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" value="@_mutasiDate.ToString("yyyy-MM-dd")"
+                           @onchange="e => _mutasiDate = DateOnly.Parse(e.Value?.ToString() ?? _mutasiDate.ToString())" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Kios Asal <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" Value="_sourceKiosId"
+                                 ValueChanged="(Guid id) => OnSourceKiosChangedAsync(id)"
+                                 ValueExpression="() => _sourceKiosId">
+                        <option value="">— Pilih —</option>
+                        @foreach (var k in (_kiosList ?? []).Where(k => k.IsActive))
+                        {
+                            <option value="@k.Id">@k.Code — @k.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Kios Tujuan <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" @bind-Value="_destinationKiosId">
+                        <option value="">— Pilih —</option>
+                        @foreach (var k in (_kiosList ?? []).Where(k => k.IsActive && k.Id != _sourceKiosId))
+                        {
+                            <option value="@k.Id">@k.Code — @k.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+            </div>
+
+            @* Engine numbers *@
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-semibold">Nomor Mesin <span class="text-danger">*</span></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            @onclick="AddEmptyEngineNumber">
+                        <i class="bi bi-plus-lg"></i> Tambah Manual
+                    </button>
+                </div>
+
+                @if (_engineNumbers.Count > 0)
+                {
+                    <div class="mb-2">
+                        @foreach (var (num, idx) in _engineNumbers.Select((n, i) => (n, i)))
+                        {
+                            <div class="input-group input-group-sm mb-1" style="max-width:400px">
+                                <input type="text" class="form-control font-monospace"
+                                       value="@_engineNumbers[idx]"
+                                       @onchange="e => _engineNumbers[idx] = e.Value?.ToString() ?? string.Empty"
+                                       placeholder="No. Mesin" />
+                                <button type="button" class="btn btn-outline-danger"
+                                        @onclick="() => RemoveEngineNumber(idx)">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @* Available stocks helper table *@
+                @if (_availableStocks is { Count: > 0 })
+                {
+                    <div class="mt-2">
+                        <div class="text-muted small mb-1">
+                            Stok tersedia di kios asal — klik <strong>+</strong> untuk menambahkan:
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0" style="max-width:700px">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>No. Mesin</th>
+                                        <th>Tipe Motor</th>
+                                        <th>Warna</th>
+                                        <th style="width:60px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var stock in _availableStocks.Where(s => s.Status == "TERSEDIA"))
+                                    {
+                                        var alreadyAdded = _engineNumbers.Contains(stock.NoMesin);
+                                        <tr class="@(alreadyAdded ? "table-success" : "")">
+                                            <td class="font-monospace small">@stock.NoMesin</td>
+                                            <td class="small">@TipeMotorCode(stock.TipeMotorId)</td>
+                                            <td class="small">@WarnaName(stock.WarnaId)</td>
+                                            <td>
+                                                @if (alreadyAdded)
+                                                {
+                                                    <span class="badge bg-success"><i class="bi bi-check-lg"></i></span>
+                                                }
+                                                else
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                                            @onclick="() => AddEngineNumber(stock.NoMesin)">
+                                                        <i class="bi bi-plus-lg"></i>
+                                                    </button>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+                else if (_sourceKiosId != Guid.Empty && _availableStocks is not null)
+                {
+                    <div class="text-muted small mt-1">Tidak ada stok TERSEDIA di kios ini.</div>
+                }
+            </div>
+
+            @* Kelengkapan items *@
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-semibold">Item Kelengkapan <span class="text-muted small">(opsional)</span></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AddKelengkapanItem">
+                        <i class="bi bi-plus-lg"></i> Tambah Kelengkapan
+                    </button>
+                </div>
+                @if (_kelengkapanItems.Count > 0)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nama Kelengkapan</th>
+                                    <th style="width:100px">Qty</th>
+                                    <th style="width:40px"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var (row, idx) in _kelengkapanItems.Select((r, i) => (r, i)))
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm"
+                                                   @bind="row.KelengkapanName" placeholder="Nama kelengkapan" />
+                                        </td>
+                                        <td>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="row.Qty" />
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => RemoveKelengkapanItem(idx)">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <button type="button" class="btn btn-primary" @onclick="HandleCreate" disabled="@_saving">
+                @if (_saving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                else
+                {
+                    <i class="bi bi-check-lg me-1"></i>
+                }
+                Simpan Mutasi
+            </button>
+            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="ToggleCreate">Batal</button>
+        </div>
+    </div>
+}
+
+@* ── Detail card ── *@
+@if (_viewingDetail is not null)
+{
+    <div class="card mb-4 border-info">
+        <div class="card-header fw-semibold text-info-emphasis bg-info-subtle d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-eye me-1"></i> Detail Mutasi — @_viewingDetail.MutasiNumber</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _viewingDetail = null">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3 small">
+                <div class="col-md-2">
+                    <div class="text-muted">Tgl Mutasi</div>
+                    <div>@_viewingDetail.MutasiDate.ToString("dd/MM/yyyy")</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-muted">Kios Asal</div>
+                    <div class="fw-semibold">@KiosCode(_viewingDetail.SourceKiosId)</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-muted">Kios Tujuan</div>
+                    <div class="fw-semibold">@KiosCode(_viewingDetail.DestinationKiosId)</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-muted">Jml Unit</div>
+                    <div>@(_viewingDetail.EngineNumbers?.Count ?? 0)</div>
+                </div>
+            </div>
+            @if (_viewingDetail.EngineNumbers is { Count: > 0 })
+            {
+                <h6 class="fw-semibold mb-2">Nomor Mesin</h6>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    @foreach (var n in _viewingDetail.EngineNumbers)
+                    {
+                        <span class="badge bg-secondary font-monospace">@n</span>
+                    }
+                </div>
+            }
+            @if (_viewingDetail.KelengkapanItems is { Count: > 0 })
+            {
+                <h6 class="fw-semibold mb-2">Item Kelengkapan</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0" style="max-width:400px">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nama</th>
+                                <th class="text-end">Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var k in _viewingDetail.KelengkapanItems)
+                            {
+                                <tr>
+                                    <td>@k.KelengkapanName</td>
+                                    <td class="text-end">@k.Qty</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@* ── List table ── *@
+<div class="card">
+    <div class="card-header fw-semibold">Semua Mutasi Stok</div>
+    <div class="card-body p-0">
+        @if (_list is null)
+        {
+            <div class="p-3 text-muted">
+                <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+            </div>
+        }
+        else if (_list.Count == 0)
+        {
+            <div class="p-3 text-muted">Belum ada mutasi yang terdaftar.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>No. Mutasi</th>
+                            <th>Tgl Mutasi</th>
+                            <th>Kios Asal</th>
+                            <th>Kios Tujuan</th>
+                            <th class="text-end">Jml Unit</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in _list)
+                        {
+                            <tr class="@(_viewingDetail?.Id == m.Id ? "table-info" : "")">
+                                <td class="fw-semibold">@m.MutasiNumber</td>
+                                <td>@m.MutasiDate.ToString("dd/MM/yyyy")</td>
+                                <td class="small">@KiosCode(m.SourceKiosId)</td>
+                                <td class="small">@KiosCode(m.DestinationKiosId)</td>
+                                <td class="text-end">@(m.EngineNumbers?.Count ?? 0)</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-info" title="Detail"
+                                            @onclick="() => ViewDetail(m)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<MutasiDto>?   _list;
+    private List<KiosDto>?     _kiosList;
+    private List<TipeMotorDto>? _tipeMotors;
+    private List<WarnaDto>?    _warnas;
+    private List<StockDto>?    _availableStocks;
+    private MutasiDto?         _viewingDetail;
+    private bool               _showCreate;
+    private bool               _saving;
+    private readonly List<string> _errors = [];
+    private string?            _notice;
+
+    // ── Create form state ──────────────────────────────────────────────────────
+
+    private sealed class KelengkapanItemRow
+    {
+        public string KelengkapanName { get; set; } = "";
+        public int    Qty             { get; set; } = 1;
+    }
+
+    private string                   _mutasiNumber       = "";
+    private DateOnly                 _mutasiDate         = DateOnly.FromDateTime(DateTime.Today);
+    private Guid                     _sourceKiosId;
+    private Guid                     _destinationKiosId;
+    private List<string>             _engineNumbers      = [];
+    private List<KelengkapanItemRow> _kelengkapanItems   = [];
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        var listTask  = Api.GetMutasisAsync();
+        var kiosTask  = Api.GetKiosAsync();
+        var tipeTask  = Api.GetTipeMotorAsync();
+        var warnaTask = Api.GetWarnaAsync();
+        await Task.WhenAll(listTask, kiosTask, tipeTask, warnaTask);
+        _list       = listTask.Result  ?? [];
+        _kiosList   = kiosTask.Result  ?? [];
+        _tipeMotors = tipeTask.Result  ?? [];
+        _warnas     = warnaTask.Result ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _list = await Api.GetMutasisAsync() ?? [];
+
+    // ── Actions ────────────────────────────────────────────────────────────────
+
+    private void ToggleCreate()
+    {
+        _showCreate = !_showCreate;
+        if (!_showCreate) ResetForm();
+    }
+
+    private async Task OnSourceKiosChangedAsync(Guid kiosId)
+    {
+        _sourceKiosId    = kiosId;
+        _engineNumbers.Clear();
+        if (kiosId != Guid.Empty)
+            _availableStocks = await Api.GetStocksByKiosAsync(kiosId) ?? [];
+        else
+            _availableStocks = null;
+    }
+
+    private void AddEmptyEngineNumber() => _engineNumbers.Add(string.Empty);
+
+    private void AddEngineNumber(string noMesin)
+    {
+        if (!_engineNumbers.Contains(noMesin))
+            _engineNumbers.Add(noMesin);
+    }
+
+    private void RemoveEngineNumber(int idx) => _engineNumbers.RemoveAt(idx);
+
+    private void AddKelengkapanItem()           => _kelengkapanItems.Add(new KelengkapanItemRow());
+    private void RemoveKelengkapanItem(int idx) => _kelengkapanItems.RemoveAt(idx);
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+
+        if (string.IsNullOrWhiteSpace(_mutasiNumber))        { _errors.Add("No. Mutasi wajib diisi.");         return; }
+        if (_sourceKiosId == Guid.Empty)                     { _errors.Add("Kios Asal wajib dipilih.");        return; }
+        if (_destinationKiosId == Guid.Empty)                { _errors.Add("Kios Tujuan wajib dipilih.");      return; }
+        if (_sourceKiosId == _destinationKiosId)             { _errors.Add("Kios Asal dan Tujuan harus berbeda."); return; }
+        if (_engineNumbers.Count == 0)                       { _errors.Add("Minimal 1 nomor mesin wajib diisi."); return; }
+        if (_engineNumbers.Any(string.IsNullOrWhiteSpace))   { _errors.Add("Semua nomor mesin harus diisi.");  return; }
+
+        _saving = true;
+
+        var klRequests = _kelengkapanItems
+            .Select(r => new MutasiKelengkapanItemRequest(r.KelengkapanName, r.Qty))
+            .ToList();
+
+        var validEngines = _engineNumbers.Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+
+        var (id, errors) = await Api.CreateMutasiAsync(
+            _mutasiNumber.Trim(), _mutasiDate, _sourceKiosId, _destinationKiosId,
+            validEngines, klRequests);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = $"Mutasi '{_mutasiNumber}' berhasil ditambahkan.";
+        _showCreate = false;
+        ResetForm();
+        await LoadAsync();
+    }
+
+    private async Task ViewDetail(MutasiDto m)
+    {
+        if (_viewingDetail?.Id == m.Id) { _viewingDetail = null; return; }
+        _viewingDetail = await Api.GetMutasiByIdAsync(m.Id) ?? m;
+    }
+
+    private void ResetForm()
+    {
+        _mutasiNumber     = "";
+        _mutasiDate       = DateOnly.FromDateTime(DateTime.Today);
+        _sourceKiosId     = Guid.Empty;
+        _destinationKiosId = Guid.Empty;
+        _availableStocks  = null;
+        _engineNumbers    = [];
+        _kelengkapanItems = [];
+    }
+
+    // ── Display helpers ────────────────────────────────────────────────────────
+
+    private string KiosCode(Guid id)
+        => _kiosList?.FirstOrDefault(k => k.Id == id)?.Code ?? "—";
+
+    private string TipeMotorCode(Guid id)
+        => _tipeMotors?.FirstOrDefault(t => t.Id == id)?.Code ?? "—";
+
+    private string WarnaName(Guid id)
+        => _warnas?.FirstOrDefault(w => w.Id == id)?.Name ?? "—";
+}

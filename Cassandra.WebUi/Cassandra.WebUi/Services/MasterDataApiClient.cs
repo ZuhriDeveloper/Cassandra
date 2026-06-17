@@ -732,6 +732,109 @@ public class MasterDataApiClient(HttpClient http)
         return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
     }
 
+    // ── SO (Surat Order) ──────────────────────────────────────────────────────────
+
+    public Task<List<SoDto>?> GetSosAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<SoDto>>("api/dealer/so", ct);
+
+    public Task<SoDto?> GetSoByIdAsync(Guid id, CancellationToken ct = default)
+        => http.GetFromJsonAsync<SoDto>($"api/dealer/so/{id}", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateSoAsync(
+        string soNumber, DateOnly soDate, DateOnly dueDate, string paymentType,
+        Guid metodeKeuanganId, decimal subsidi, decimal cashDiscount, decimal df,
+        List<SoItemRequest> items, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/so",
+            new { soNumber, soDate, dueDate, paymentType, metodeKeuanganId, subsidi, cashDiscount, df, items }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateSoResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    public async Task<List<string>?> ChangeSoStatusAsync(Guid id, string status, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/so/{id}/status", new { status }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    public async Task<List<string>?> DeleteSoAsync(Guid id, CancellationToken ct = default)
+    {
+        var response = await http.DeleteAsync($"api/dealer/so/{id}", ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── Stock ─────────────────────────────────────────────────────────────────
+
+    public Task<List<StockDto>?> GetStocksAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<StockDto>>("api/dealer/stock", ct);
+
+    public Task<List<StockDto>?> GetStocksByKiosAsync(Guid kiosId, CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<StockDto>>($"api/dealer/stock/by-kios/{kiosId}", ct);
+
+    public async Task<List<string>?> ChangeStockStatusAsync(Guid id, string status, CancellationToken ct = default)
+    {
+        var response = await http.PatchAsJsonAsync($"api/dealer/stock/{id}/status", new { status }, ct);
+        return response.IsSuccessStatusCode ? null : await ReadErrorsAsync(response);
+    }
+
+    // ── SoPenerimaan (Goods Receipt) ──────────────────────────────────────────
+
+    public Task<List<SoPenerimaanDto>?> GetSoPenerimaansAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<SoPenerimaanDto>>("api/dealer/so-penerimaan", ct);
+
+    public Task<SoPenerimaanDto?> GetSoPenerimaanByIdAsync(Guid id, CancellationToken ct = default)
+        => http.GetFromJsonAsync<SoPenerimaanDto>($"api/dealer/so-penerimaan/{id}", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateSoPenerimaanAsync(
+        string suratJalanId, DateOnly suratJalanDate, Guid soId,
+        List<SoPenerimaanMotorItemRequest> motorItems,
+        List<SoPenerimaanKelengkapanItemRequest> kelengkapanItems,
+        CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/so-penerimaan",
+            new { suratJalanId, suratJalanDate, soId, motorItems, kelengkapanItems }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateSoPenerimaanResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    // ── SoRetur ───────────────────────────────────────────────────────────────
+
+    public Task<List<SoReturDto>?> GetSoReturnsAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<SoReturDto>>("api/dealer/so-retur", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateSoReturAsync(
+        string returNumber, Guid soId, DateOnly returDate, string reason,
+        List<SoReturItemRequest> items, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/so-retur",
+            new { returNumber, soId, returDate, reason, items }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateSoReturResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
+    // ── Mutasi ────────────────────────────────────────────────────────────────
+
+    public Task<List<MutasiDto>?> GetMutasisAsync(CancellationToken ct = default)
+        => http.GetFromJsonAsync<List<MutasiDto>>("api/dealer/mutasi", ct);
+
+    public Task<MutasiDto?> GetMutasiByIdAsync(Guid id, CancellationToken ct = default)
+        => http.GetFromJsonAsync<MutasiDto>($"api/dealer/mutasi/{id}", ct);
+
+    public async Task<(Guid? Id, List<string>? Errors)> CreateMutasiAsync(
+        string mutasiNumber, DateOnly mutasiDate, Guid sourceKiosId, Guid destinationKiosId,
+        List<string> engineNumbers, List<MutasiKelengkapanItemRequest> kelengkapanItems,
+        CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/dealer/mutasi",
+            new { mutasiNumber, mutasiDate, sourceKiosId, destinationKiosId, engineNumbers, kelengkapanItems }, ct);
+        if (!response.IsSuccessStatusCode) return (null, await ReadErrorsAsync(response));
+        var result = await response.Content.ReadFromJsonAsync<CreateMutasiResponse>(cancellationToken: ct);
+        return (result?.Id, null);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static async Task<List<string>> ReadErrorsAsync(HttpResponseMessage r)
@@ -871,3 +974,35 @@ public record CreateLedgerResponse(Guid Id);
 
 public record PelanggaranWilayahDto(Guid Id, string AreaCode, decimal ExtraFee, bool IsActive);
 public record CreatePelanggaranWilayahResponse(Guid Id);
+
+// Phase 5 — Inventory & Stock
+public record SoItemDto(Guid TipeMotorId, Guid WarnaId, int Qty, decimal NettPrice);
+public record SoDto(Guid Id, string SoNumber, DateOnly SoDate, DateOnly DueDate, string PaymentType,
+    Guid MetodeKeuanganId, int QtyUnit, decimal Total, decimal Subsidi, decimal CashDiscount,
+    decimal PPn, decimal TotalAmount, decimal Df, string Status, List<SoItemDto>? Items);
+public record SoItemRequest(Guid TipeMotorId, Guid WarnaId, int Qty, decimal NettPrice);
+public record CreateSoResponse(Guid Id);
+
+public record StockDto(Guid Id, string NoMesin, string NoRangka, Guid TipeMotorId, Guid WarnaId,
+    Guid KiosId, string SuratJalanId, DateOnly SuratJalanDate, Guid SoId, string AssemblyYear,
+    string Status, bool IsActive);
+
+public record SoPenerimaanItemMotorDto(Guid TipeMotorId, Guid WarnaId, string NoMesin, string NoRangka, Guid KiosId, string AssemblyYear);
+public record SoPenerimaanItemKelengkapanDto(Guid KelengkapanId, int Qty, string? Notes);
+public record SoPenerimaanDto(Guid Id, string SuratJalanId, DateOnly SuratJalanDate, Guid SoId,
+    List<SoPenerimaanItemMotorDto>? MotorItems, List<SoPenerimaanItemKelengkapanDto>? KelengkapanItems);
+public record SoPenerimaanMotorItemRequest(Guid TipeMotorId, Guid WarnaId, string NoMesin, string NoRangka, Guid KiosId, string AssemblyYear);
+public record SoPenerimaanKelengkapanItemRequest(Guid KelengkapanId, int Qty, string? Notes);
+public record CreateSoPenerimaanResponse(Guid Id);
+
+public record SoReturItemDto(Guid TipeMotorId, Guid WarnaId, int Qty, decimal NettPrice);
+public record SoReturDto(Guid Id, string ReturNumber, Guid SoId, DateOnly ReturDate, string Reason,
+    decimal Total, decimal PPn, decimal TotalAmount, List<SoReturItemDto>? Items);
+public record SoReturItemRequest(Guid TipeMotorId, Guid WarnaId, int Qty, decimal NettPrice);
+public record CreateSoReturResponse(Guid Id);
+
+public record MutasiKelengkapanItemDto(string KelengkapanName, int Qty);
+public record MutasiDto(Guid Id, string MutasiNumber, DateOnly MutasiDate, Guid SourceKiosId,
+    Guid DestinationKiosId, bool IsActive, List<string>? EngineNumbers, List<MutasiKelengkapanItemDto>? KelengkapanItems);
+public record MutasiKelengkapanItemRequest(string KelengkapanName, int Qty);
+public record CreateMutasiResponse(Guid Id);

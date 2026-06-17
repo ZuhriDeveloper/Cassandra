@@ -1,0 +1,514 @@
+@page "/dealer/so"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Surat Order (SO) — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Surat Order (SO)</h4>
+    <button class="btn btn-primary" @onclick="ToggleCreate">
+        <i class="bi bi-plus-lg me-1"></i>
+        @(_showCreate ? "Tutup Form" : "Tambah SO")
+    </button>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+@* ── Create form ── *@
+@if (_showCreate)
+{
+    <div class="card mb-4">
+        <div class="card-header fw-semibold">
+            <i class="bi bi-plus-circle me-1"></i> Tambah Surat Order Baru
+        </div>
+        <div class="card-body">
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">No. SO <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" @bind="_soNumber" placeholder="cth. SO-2025-001" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tanggal SO <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" value="@_soDate.ToString("yyyy-MM-dd")"
+                           @onchange="e => _soDate = DateOnly.Parse(e.Value?.ToString() ?? _soDate.ToString())" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Jatuh Tempo <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" value="@_dueDate.ToString("yyyy-MM-dd")"
+                           @onchange="e => _dueDate = DateOnly.Parse(e.Value?.ToString() ?? _dueDate.ToString())" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Jenis Pembayaran <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" @bind-Value="_paymentType">
+                        <option value="CASH">CASH</option>
+                        <option value="DF">DF</option>
+                    </InputSelect>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Metode Keuangan <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" @bind-Value="_metodeKeuanganId">
+                        <option value="">— Pilih —</option>
+                        @foreach (var m in (_metodeKeuangans ?? []).Where(m => m.IsActive))
+                        {
+                            <option value="@m.Id">@m.Code — @m.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Subsidi</label>
+                    <InputNumber class="form-control" @bind-Value="_subsidi" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Diskon Cash % (0–100)</label>
+                    <InputNumber class="form-control" @bind-Value="_cashDiscount" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">DF</label>
+                    <InputNumber class="form-control" @bind-Value="_df" />
+                </div>
+            </div>
+
+            @* ── Item rows ── *@
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-semibold">Item Motor</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddItem">
+                        <i class="bi bi-plus-lg"></i> Tambah Baris
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tipe Motor</th>
+                                <th>Warna</th>
+                                <th style="width:90px">Qty</th>
+                                <th style="width:160px">Harga Nett</th>
+                                <th style="width:40px"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var (row, idx) in _items.Select((r, i) => (r, i)))
+                            {
+                                <tr>
+                                    <td>
+                                        <InputSelect class="form-select form-select-sm" Value="row.TipeMotorId"
+                                                     ValueChanged="(Guid id) => OnTipeMotorChanged(row, id)"
+                                                     ValueExpression="() => row.TipeMotorId">
+                                            <option value="">— Pilih —</option>
+                                            @foreach (var t in (_tipeMotors ?? []).Where(t => t.IsActive))
+                                            {
+                                                <option value="@t.Id">@t.Code — @t.ShortName</option>
+                                            }
+                                        </InputSelect>
+                                    </td>
+                                    <td>
+                                        <InputSelect class="form-select form-select-sm" @bind-Value="row.WarnaId">
+                                            <option value="">— Pilih —</option>
+                                            @foreach (var w in GetWarnasForTipeMotor(row.TipeMotorId))
+                                            {
+                                                <option value="@w.Id">@w.Name</option>
+                                            }
+                                        </InputSelect>
+                                    </td>
+                                    <td>
+                                        <InputNumber class="form-control form-control-sm" @bind-Value="row.Qty" />
+                                    </td>
+                                    <td>
+                                        <InputNumber class="form-control form-control-sm" @bind-Value="row.NettPrice" />
+                                    </td>
+                                    <td>
+                                        @if (_items.Count > 1)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => RemoveItem(idx)">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @* ── Financial summary ── *@
+            <div class="card bg-light mb-3">
+                <div class="card-body py-2">
+                    <div class="row text-end small">
+                        <div class="col-3">
+                            <div class="text-muted">Total</div>
+                            <div class="fw-semibold">@ComputedTotal.ToString("N0")</div>
+                        </div>
+                        <div class="col-3">
+                            <div class="text-muted">Subsidi + Diskon</div>
+                            <div class="fw-semibold">@(_subsidi + ComputedSubtotal).ToString("N0")</div>
+                        </div>
+                        <div class="col-3">
+                            <div class="text-muted">PPn (10%)</div>
+                            <div class="fw-semibold">@ComputedPPn.ToString("N0")</div>
+                        </div>
+                        <div class="col-3">
+                            <div class="text-muted fw-bold">Total Amount</div>
+                            <div class="fw-bold fs-6">@ComputedTotalAmount.ToString("N0")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-primary" @onclick="HandleCreate" disabled="@_saving">
+                @if (_saving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                else
+                {
+                    <i class="bi bi-check-lg me-1"></i>
+                }
+                Simpan SO
+            </button>
+            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="ToggleCreate">Batal</button>
+        </div>
+    </div>
+}
+
+@* ── Detail view ── *@
+@if (_viewingDetail is not null)
+{
+    <div class="card mb-4 border-info">
+        <div class="card-header fw-semibold text-info-emphasis bg-info-subtle d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-eye me-1"></i> Detail SO — @_viewingDetail.SoNumber</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _viewingDetail = null">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3 small">
+                <div class="col-md-2">
+                    <div class="text-muted">No. SO</div>
+                    <div class="fw-semibold">@_viewingDetail.SoNumber</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-muted">Tgl SO</div>
+                    <div>@_viewingDetail.SoDate.ToString("dd/MM/yyyy")</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-muted">Jatuh Tempo</div>
+                    <div>@_viewingDetail.DueDate.ToString("dd/MM/yyyy")</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-muted">Pembayaran</div>
+                    <div>@_viewingDetail.PaymentType</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-muted">Total Amount</div>
+                    <div class="fw-semibold">@_viewingDetail.TotalAmount.ToString("N0")</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-muted">Status</div>
+                    <div>@StatusBadge(_viewingDetail.Status)</div>
+                </div>
+            </div>
+            @if (_viewingDetail.Items is { Count: > 0 })
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tipe Motor</th>
+                                <th>Warna</th>
+                                <th class="text-end">Qty</th>
+                                <th class="text-end">Harga Nett</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in _viewingDetail.Items)
+                            {
+                                <tr>
+                                    <td>@TipeMotorName(item.TipeMotorId)</td>
+                                    <td>@WarnaName(item.WarnaId)</td>
+                                    <td class="text-end">@item.Qty</td>
+                                    <td class="text-end">@item.NettPrice.ToString("N0")</td>
+                                    <td class="text-end fw-semibold">@((item.Qty * item.NettPrice).ToString("N0"))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@* ── SO list table ── *@
+<div class="card">
+    <div class="card-header fw-semibold">Semua Surat Order</div>
+    <div class="card-body p-0">
+        @if (_list is null)
+        {
+            <div class="p-3 text-muted">
+                <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+            </div>
+        }
+        else if (_list.Count == 0)
+        {
+            <div class="p-3 text-muted">Belum ada SO yang terdaftar.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>No. SO</th>
+                            <th>Tgl SO</th>
+                            <th>Jatuh Tempo</th>
+                            <th>Metode</th>
+                            <th class="text-end">Qty</th>
+                            <th class="text-end">Total Amt</th>
+                            <th>Status</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var so in _list)
+                        {
+                            <tr class="@(_viewingDetail?.Id == so.Id ? "table-info" : "")">
+                                <td class="fw-semibold">@so.SoNumber</td>
+                                <td>@so.SoDate.ToString("dd/MM/yyyy")</td>
+                                <td>@so.DueDate.ToString("dd/MM/yyyy")</td>
+                                <td class="small">@MetodeKeuanganCode(so.MetodeKeuanganId)</td>
+                                <td class="text-end">@so.QtyUnit</td>
+                                <td class="text-end">@so.TotalAmount.ToString("N0")</td>
+                                <td>@StatusBadge(so.Status)</td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <button class="btn btn-sm btn-outline-info" title="Detail"
+                                                @onclick="() => ViewDetail(so)">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <AuthorizeView Roles="Admin">
+                                            @if (so.Status == "AKTIF")
+                                            {
+                                                <button class="btn btn-sm btn-outline-success" title="Selesaikan"
+                                                        @onclick="() => HandleChangeStatus(so, StatusSelesai)">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-warning" title="Retur"
+                                                        @onclick="() => HandleChangeStatus(so, StatusRetur)">
+                                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" title="Hapus"
+                                                        @onclick="() => HandleDelete(so)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        </AuthorizeView>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private const string StatusSelesai = "SELESAI";
+    private const string StatusRetur   = "RETUR";
+
+    private List<SoDto>?             _list;
+    private List<MetodeKeuanganDto>? _metodeKeuangans;
+    private List<TipeMotorDto>?      _tipeMotors;
+    private List<WarnaDto>?          _warnas;
+    private bool                     _showCreate;
+    private bool                     _saving;
+    private readonly List<string>    _errors = [];
+    private string?                  _notice;
+    private SoDto?                   _viewingDetail;
+
+    // ── Create form state ──────────────────────────────────────────────────────
+
+    private sealed class SoItemRow
+    {
+        public Guid    TipeMotorId { get; set; }
+        public Guid    WarnaId     { get; set; }
+        public int     Qty         { get; set; } = 1;
+        public decimal NettPrice   { get; set; }
+    }
+
+    private string             _soNumber       = "";
+    private DateOnly           _soDate         = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly           _dueDate        = DateOnly.FromDateTime(DateTime.Today.AddMonths(1));
+    private string             _paymentType    = "CASH";
+    private Guid               _metodeKeuanganId;
+    private decimal            _subsidi;
+    private decimal            _cashDiscount;
+    private decimal            _df;
+    private List<SoItemRow>    _items          = [new SoItemRow()];
+
+    // ── Financial computed ─────────────────────────────────────────────────────
+
+    private decimal ComputedTotal       => _items.Sum(i => i.Qty * i.NettPrice);
+    private decimal ComputedSubtotal    => (ComputedTotal - _subsidi) * (_cashDiscount / 100m);
+    private decimal ComputedPPn         => (ComputedTotal - _subsidi - ComputedSubtotal) * 0.1m;
+    private decimal ComputedTotalAmount => ComputedTotal - _subsidi - ComputedSubtotal + ComputedPPn;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        var soTask      = Api.GetSosAsync();
+        var metodeTask  = Api.GetMetodeKeuanganAsync();
+        var tipeTask    = Api.GetTipeMotorAsync();
+        var warnaTask   = Api.GetWarnaAsync();
+        await Task.WhenAll(soTask, metodeTask, tipeTask, warnaTask);
+        _list            = soTask.Result     ?? [];
+        _metodeKeuangans = metodeTask.Result ?? [];
+        _tipeMotors      = tipeTask.Result   ?? [];
+        _warnas          = warnaTask.Result  ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _list = await Api.GetSosAsync() ?? [];
+
+    // ── Actions ────────────────────────────────────────────────────────────────
+
+    private void ToggleCreate()
+    {
+        _showCreate = !_showCreate;
+        if (!_showCreate) ResetForm();
+    }
+
+    private void AddItem() => _items.Add(new SoItemRow());
+    private void RemoveItem(int idx) => _items.RemoveAt(idx);
+
+    private void OnTipeMotorChanged(SoItemRow row, Guid tipeMotorId)
+    {
+        row.TipeMotorId = tipeMotorId;
+        row.WarnaId     = Guid.Empty;
+    }
+
+    private IEnumerable<WarnaDto> GetWarnasForTipeMotor(Guid tipeMotorId)
+    {
+        if (_tipeMotors is null || _warnas is null || tipeMotorId == Guid.Empty)
+            return [];
+        var tipe = _tipeMotors.FirstOrDefault(t => t.Id == tipeMotorId);
+        if (tipe is null) return [];
+        return _warnas.Where(w => tipe.WarnaIds.Contains(w.Id) && w.IsActive);
+    }
+
+    private async Task HandleCreate()
+    {
+        _errors.Clear();
+
+        if (string.IsNullOrWhiteSpace(_soNumber))        { _errors.Add("No. SO wajib diisi.");            return; }
+        if (_metodeKeuanganId == Guid.Empty)              { _errors.Add("Metode Keuangan wajib dipilih."); return; }
+        if (_items.Count == 0)                            { _errors.Add("Minimal 1 item wajib diisi.");    return; }
+        if (_items.Any(i => i.TipeMotorId == Guid.Empty)) { _errors.Add("Semua item harus memiliki Tipe Motor."); return; }
+        if (_items.Any(i => i.WarnaId == Guid.Empty))     { _errors.Add("Semua item harus memiliki Warna.");      return; }
+        if (_items.Any(i => i.Qty <= 0))                  { _errors.Add("Qty harus lebih dari 0.");               return; }
+
+        _saving = true;
+
+        var requests = _items
+            .Select(i => new SoItemRequest(i.TipeMotorId, i.WarnaId, i.Qty, i.NettPrice))
+            .ToList();
+
+        var (id, errors) = await Api.CreateSoAsync(
+            _soNumber.Trim(), _soDate, _dueDate, _paymentType,
+            _metodeKeuanganId, _subsidi, _cashDiscount, _df, requests);
+
+        _saving = false;
+
+        if (errors is not null) { _errors.AddRange(errors); return; }
+
+        _notice     = $"SO '{_soNumber}' berhasil ditambahkan.";
+        _showCreate = false;
+        ResetForm();
+        await LoadAsync();
+    }
+
+    private async Task HandleChangeStatus(SoDto so, string status)
+    {
+        _errors.Clear();
+        var errors = await Api.ChangeSoStatusAsync(so.Id, status);
+        if (errors is not null) { _errors.AddRange(errors); return; }
+        _notice = $"Status SO '{so.SoNumber}' berhasil diubah ke {status}.";
+        if (_viewingDetail?.Id == so.Id) _viewingDetail = null;
+        await LoadAsync();
+    }
+
+    private async Task HandleDelete(SoDto so)
+    {
+        _errors.Clear();
+        var errors = await Api.DeleteSoAsync(so.Id);
+        if (errors is not null) { _errors.AddRange(errors); return; }
+        _notice = $"SO '{so.SoNumber}' berhasil dihapus.";
+        if (_viewingDetail?.Id == so.Id) _viewingDetail = null;
+        await LoadAsync();
+    }
+
+    private async Task ViewDetail(SoDto so)
+    {
+        if (_viewingDetail?.Id == so.Id) { _viewingDetail = null; return; }
+        _viewingDetail = await Api.GetSoByIdAsync(so.Id) ?? so;
+    }
+
+    private void ResetForm()
+    {
+        _soNumber         = "";
+        _soDate           = DateOnly.FromDateTime(DateTime.Today);
+        _dueDate          = DateOnly.FromDateTime(DateTime.Today.AddMonths(1));
+        _paymentType      = "CASH";
+        _metodeKeuanganId = Guid.Empty;
+        _subsidi          = 0;
+        _cashDiscount     = 0;
+        _df               = 0;
+        _items            = [new SoItemRow()];
+    }
+
+    // ── Display helpers ────────────────────────────────────────────────────────
+
+    private string MetodeKeuanganCode(Guid id)
+        => _metodeKeuangans?.FirstOrDefault(m => m.Id == id)?.Code ?? "—";
+
+    private string TipeMotorName(Guid id)
+        => _tipeMotors?.FirstOrDefault(t => t.Id == id)?.Code ?? id.ToString()[..8];
+
+    private string WarnaName(Guid id)
+        => _warnas?.FirstOrDefault(w => w.Id == id)?.Name ?? "—";
+
+    private RenderFragment StatusBadge(string status) => status switch
+    {
+        "AKTIF"   => @<span class="badge bg-primary">AKTIF</span>,
+        "SELESAI" => @<span class="badge bg-success">SELESAI</span>,
+        "RETUR"   => @<span class="badge bg-danger">RETUR</span>,
+        _         => @<span class="badge bg-secondary">@status</span>,
+    };
+}

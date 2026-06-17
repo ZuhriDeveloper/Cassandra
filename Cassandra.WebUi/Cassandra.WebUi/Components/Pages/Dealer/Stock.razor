@@ -1,0 +1,218 @@
+@page "/dealer/stock"
+@attribute [Authorize(Roles = "Admin,Sales,Cashier")]
+@rendermode InteractiveServer
+@using Cassandra.WebUi.Services
+@inject MasterDataApiClient Api
+
+<PageTitle>Stok Unit — Cassandra</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold">Stok Unit</h4>
+</div>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger alert-dismissible">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in _errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(_notice))
+{
+    <div class="alert alert-success alert-dismissible">
+        @_notice
+        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
+    </div>
+}
+
+@* ── Filter row ── *@
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Filter Status</label>
+                <InputSelect class="form-select form-select-sm" @bind-Value="_filterStatus">
+                    <option value="">— Semua Status —</option>
+                    <option value="TERSEDIA">TERSEDIA</option>
+                    <option value="DIPESAN">DIPESAN</option>
+                    <option value="TERJUAL">TERJUAL</option>
+                    <option value="TERKIRIM">TERKIRIM</option>
+                    <option value="RETUR">RETUR</option>
+                </InputSelect>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Filter Kios</label>
+                <InputSelect class="form-select form-select-sm" @bind-Value="_filterKiosId">
+                    <option value="">— Semua Kios —</option>
+                    @foreach (var k in (_kiosList ?? []))
+                    {
+                        <option value="@k.Id">@k.Code — @k.Name</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Stock table ── *@
+<div class="card">
+    <div class="card-header fw-semibold">Daftar Stok Unit</div>
+    <div class="card-body p-0">
+        @if (_list is null)
+        {
+            <div class="p-3 text-muted">
+                <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
+            </div>
+        }
+        else if (FilteredList.Count == 0)
+        {
+            <div class="p-3 text-muted">Tidak ada stok yang sesuai filter.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>No. Mesin</th>
+                            <th>No. Rangka</th>
+                            <th>Tipe Motor</th>
+                            <th>Warna</th>
+                            <th>Kios</th>
+                            <th>Tgl Masuk</th>
+                            <th>Tahun Rakit</th>
+                            <th>Status</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var stock in FilteredList)
+                        {
+                            <tr>
+                                <td class="fw-semibold font-monospace small">@stock.NoMesin</td>
+                                <td class="font-monospace small">@stock.NoRangka</td>
+                                <td class="small">@TipeMotorCode(stock.TipeMotorId)</td>
+                                <td class="small">@WarnaName(stock.WarnaId)</td>
+                                <td class="small">@KiosCode(stock.KiosId)</td>
+                                <td class="small">@stock.SuratJalanDate.ToString("dd/MM/yyyy")</td>
+                                <td>@stock.AssemblyYear</td>
+                                <td>@StatusBadge(stock.Status)</td>
+                                <td class="text-end">
+                                    <AuthorizeView Roles="Admin">
+                                        @if (_statusEditingId == stock.Id)
+                                        {
+                                            <div class="d-flex gap-1 justify-content-end align-items-center">
+                                                <InputSelect class="form-select form-select-sm" style="width:130px"
+                                                             @bind-Value="_newStatus">
+                                                    <option value="TERSEDIA">TERSEDIA</option>
+                                                    <option value="DIPESAN">DIPESAN</option>
+                                                    <option value="TERJUAL">TERJUAL</option>
+                                                    <option value="TERKIRIM">TERKIRIM</option>
+                                                    <option value="RETUR">RETUR</option>
+                                                </InputSelect>
+                                                <button class="btn btn-sm btn-primary" @onclick="() => HandleSaveStatus(stock)"
+                                                        disabled="@_saving">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary"
+                                                        @onclick="() => _statusEditingId = null">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary" title="Ubah Status"
+                                                    @onclick="() => StartStatusEdit(stock)">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                        }
+                                    </AuthorizeView>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<StockDto>?        _list;
+    private List<TipeMotorDto>?    _tipeMotors;
+    private List<WarnaDto>?        _warnas;
+    private List<KiosDto>?         _kiosList;
+    private readonly List<string>  _errors = [];
+    private string?                _notice;
+    private bool                   _saving;
+
+    private string  _filterStatus = "";
+    private Guid    _filterKiosId;
+
+    private Guid?   _statusEditingId;
+    private string  _newStatus = "";
+
+    private List<StockDto> FilteredList => (_list ?? [])
+        .Where(s => string.IsNullOrEmpty(_filterStatus) || s.Status == _filterStatus)
+        .Where(s => _filterKiosId == Guid.Empty || s.KiosId == _filterKiosId)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var stockTask = Api.GetStocksAsync();
+        var tipeTask  = Api.GetTipeMotorAsync();
+        var warnaTask = Api.GetWarnaAsync();
+        var kiosTask  = Api.GetKiosAsync();
+        await Task.WhenAll(stockTask, tipeTask, warnaTask, kiosTask);
+        _list       = stockTask.Result ?? [];
+        _tipeMotors = tipeTask.Result  ?? [];
+        _warnas     = warnaTask.Result ?? [];
+        _kiosList   = kiosTask.Result  ?? [];
+    }
+
+    private async Task LoadAsync()
+        => _list = await Api.GetStocksAsync() ?? [];
+
+    private void StartStatusEdit(StockDto stock)
+    {
+        _statusEditingId = stock.Id;
+        _newStatus       = stock.Status;
+    }
+
+    private async Task HandleSaveStatus(StockDto stock)
+    {
+        _errors.Clear();
+        _saving = true;
+        var errors = await Api.ChangeStockStatusAsync(stock.Id, _newStatus);
+        _saving = false;
+        if (errors is not null) { _errors.AddRange(errors); return; }
+        _notice          = $"Status stok '{stock.NoMesin}' berhasil diubah ke {_newStatus}.";
+        _statusEditingId = null;
+        await LoadAsync();
+    }
+
+    private string TipeMotorCode(Guid id)
+        => _tipeMotors?.FirstOrDefault(t => t.Id == id)?.Code ?? "—";
+
+    private string WarnaName(Guid id)
+        => _warnas?.FirstOrDefault(w => w.Id == id)?.Name ?? "—";
+
+    private string KiosCode(Guid id)
+        => _kiosList?.FirstOrDefault(k => k.Id == id)?.Code ?? "—";
+
+    private RenderFragment StatusBadge(string status) => status switch
+    {
+        "TERSEDIA" => @<span class="badge bg-success">TERSEDIA</span>,
+        "DIPESAN"  => @<span class="badge bg-warning text-dark">DIPESAN</span>,
+        "TERJUAL"  => @<span class="badge bg-primary">TERJUAL</span>,
+        "TERKIRIM" => @<span class="badge bg-info text-dark">TERKIRIM</span>,
+        "RETUR"    => @<span class="badge bg-danger">RETUR</span>,
+        _          => @<span class="badge bg-secondary">@status</span>,
+    };
+}

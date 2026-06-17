@@ -19,8 +19,13 @@ using Cassandra.Domain.Kios.Events;
 using Cassandra.Domain.Ledger.Events;
 using Cassandra.Domain.Mediator.Events;
 using Cassandra.Domain.MetodeKeuangan.Events;
+using Cassandra.Domain.Mutasi.Events;
 using Cassandra.Domain.PelanggaranWilayah.Events;
 using Cassandra.Domain.Samsat.Events;
+using Cassandra.Domain.So.Events;
+using Cassandra.Domain.SoPenerimaan.Events;
+using Cassandra.Domain.SoRetur.Events;
+using Cassandra.Domain.Stock.Events;
 using Cassandra.Domain.Tenor.Events;
 using Cassandra.Domain.TipeMotor.Events;
 using Cassandra.Domain.Warna.Events;
@@ -186,6 +191,27 @@ public static class EventTypeRegistry
         [nameof(PelanggaranWilayahUpdated)]     = typeof(PelanggaranWilayahUpdated),
         [nameof(PelanggaranWilayahActivated)]   = typeof(PelanggaranWilayahActivated),
         [nameof(PelanggaranWilayahDeactivated)] = typeof(PelanggaranWilayahDeactivated),
+
+        // Phase 5: Inventory & Stock
+
+        // So (dealer-scoped) events
+        [nameof(SoCreated)]       = typeof(SoCreated),
+        [nameof(SoStatusChanged)] = typeof(SoStatusChanged),
+        [nameof(SoDeleted)]       = typeof(SoDeleted),
+
+        // Stock (dealer-scoped) events
+        [nameof(StockCreated)]       = typeof(StockCreated),
+        [nameof(StockStatusChanged)] = typeof(StockStatusChanged),
+        [nameof(StockMoved)]         = typeof(StockMoved),
+
+        // SoPenerimaan (dealer-scoped) events
+        [nameof(SoPenerimaanCreated)] = typeof(SoPenerimaanCreated),
+
+        // SoRetur (dealer-scoped) events
+        [nameof(SoReturCreated)] = typeof(SoReturCreated),
+
+        // Mutasi (dealer-scoped) events
+        [nameof(MutasiCreated)] = typeof(MutasiCreated),
     };
 
     public static Type Resolve(string eventType) =>

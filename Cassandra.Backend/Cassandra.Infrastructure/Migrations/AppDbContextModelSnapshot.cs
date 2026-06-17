@@ -1146,6 +1146,79 @@ namespace Cassandra.Infrastructure.Migrations
                     b.ToTable("MetodeKeuanganReadModels");
                 });
 
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.MutasiItemReadModel", b =>
+                {
+                    b.Property<Guid>("MutasiId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NoMesin")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("MutasiId", "NoMesin");
+
+                    b.ToTable("MutasiItemReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.MutasiKelengkapanReadModel", b =>
+                {
+                    b.Property<Guid>("MutasiId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("KelengkapanName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Qty")
+                        .HasColumnType("integer");
+
+                    b.HasKey("MutasiId", "KelengkapanName");
+
+                    b.ToTable("MutasiKelengkapanReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.MutasiReadModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("DealerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DestinationKiosId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateOnly>("MutasiDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("MutasiNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("SourceKiosId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DealerId", "MutasiNumber")
+                        .IsUnique();
+
+                    b.ToTable("MutasiReadModels");
+                });
+
             modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.PelanggaranWilayahReadModel", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1241,6 +1314,343 @@ namespace Cassandra.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("SamsatReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.SoItemReadModel", b =>
+                {
+                    b.Property<Guid>("SoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TipeMotorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WarnaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("NettPrice")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("Qty")
+                        .HasColumnType("integer");
+
+                    b.HasKey("SoId", "TipeMotorId", "WarnaId");
+
+                    b.ToTable("SoItemReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.SoPenerimaanItemKelengkapanReadModel", b =>
+                {
+                    b.Property<Guid>("SoPenerimaanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("KelengkapanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Qty")
+                        .HasColumnType("integer");
+
+                    b.HasKey("SoPenerimaanId", "KelengkapanId");
+
+                    b.ToTable("SoPenerimaanItemKelengkapanReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.SoPenerimaanItemMotorReadModel", b =>
+                {
+                    b.Property<Guid>("SoPenerimaanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NoMesin")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("AssemblyYear")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("KiosId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NoRangka")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("TipeMotorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WarnaId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("SoPenerimaanId", "NoMesin");
+
+                    b.ToTable("SoPenerimaanItemMotorReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.SoPenerimaanReadModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("DealerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("SuratJalanDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("SuratJalanId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DealerId", "SuratJalanId")
+                        .IsUnique();
+
+                    b.ToTable("SoPenerimaanReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.SoReadModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CashDiscount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("DealerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Df")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("MetodeKeuanganId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("PPn")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("PaymentType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("QtyUnit")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("SoDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("SoNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("Subsidi")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DealerId", "SoNumber")
+                        .IsUnique();
+
+                    b.ToTable("SoReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.SoReturItemReadModel", b =>
+                {
+                    b.Property<Guid>("SoReturId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TipeMotorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WarnaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("NettPrice")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("Qty")
+                        .HasColumnType("integer");
+
+                    b.HasKey("SoReturId", "TipeMotorId", "WarnaId");
+
+                    b.ToTable("SoReturItemReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.SoReturReadModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("DealerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("PPn")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly>("ReturDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ReturNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("SoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DealerId", "ReturNumber")
+                        .IsUnique();
+
+                    b.ToTable("SoReturReadModels");
+                });
+
+            modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.StockReadModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssemblyYear")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("DealerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("KiosId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NoMesin")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NoRangka")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("SoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateOnly>("SuratJalanDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("SuratJalanId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("TipeMotorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("WarnaId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DealerId", "NoMesin")
+                        .IsUnique();
+
+                    b.ToTable("StockReadModels");
                 });
 
             modelBuilder.Entity("Cassandra.Infrastructure.Persistence.Projections.TenorReadModel", b =>

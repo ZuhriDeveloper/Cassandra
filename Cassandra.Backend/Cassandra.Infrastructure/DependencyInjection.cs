@@ -164,6 +164,28 @@ public static class DependencyInjection
         services.AddScoped<Application.Contracts.PelanggaranWilayah.IPelanggaranWilayahRepository, PelanggaranWilayah.PelanggaranWilayahRepository>();
         services.AddScoped<Application.Contracts.PelanggaranWilayah.IPelanggaranWilayahQueryRepository, PelanggaranWilayah.PelanggaranWilayahQueryRepository>();
 
+        // ── Phase 5: Inventory & Stock ────────────────────────────────────────
+
+        // ── So ────────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.So.ISoRepository, So.SoRepository>();
+        services.AddScoped<Application.Contracts.So.ISoQueryRepository, So.SoQueryRepository>();
+
+        // ── Stock ─────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Stock.IStockRepository, Stock.StockRepository>();
+        services.AddScoped<Application.Contracts.Stock.IStockQueryRepository, Stock.StockQueryRepository>();
+
+        // ── SoPenerimaan ──────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.SoPenerimaan.ISoPenerimaanRepository, SoPenerimaan.SoPenerimaanRepository>();
+        services.AddScoped<Application.Contracts.SoPenerimaan.ISoPenerimaanQueryRepository, SoPenerimaan.SoPenerimaanQueryRepository>();
+
+        // ── SoRetur ───────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.SoRetur.ISoReturRepository, SoRetur.SoReturRepository>();
+        services.AddScoped<Application.Contracts.SoRetur.ISoReturQueryRepository, SoRetur.SoReturQueryRepository>();
+
+        // ── Mutasi ────────────────────────────────────────────────────────────────
+        services.AddScoped<Application.Contracts.Mutasi.IMutasiRepository, Mutasi.MutasiRepository>();
+        services.AddScoped<Application.Contracts.Mutasi.IMutasiQueryRepository, Mutasi.MutasiQueryRepository>();
+
         return services;
     }
 }

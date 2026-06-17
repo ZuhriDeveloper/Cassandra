@@ -1,3 +1,15 @@
+using Cassandra.Application.Commands.Mutasi.CreateMutasi;
+using Cassandra.Application.Commands.So.ChangeSoStatus;
+using Cassandra.Application.Commands.So.CreateSo;
+using Cassandra.Application.Commands.So.DeleteSo;
+using Cassandra.Application.Commands.SoPenerimaan.CreateSoPenerimaan;
+using Cassandra.Application.Commands.SoRetur.CreateSoRetur;
+using Cassandra.Application.Commands.Stock.ChangeStockStatus;
+using Cassandra.Application.Queries.Mutasi;
+using Cassandra.Application.Queries.So;
+using Cassandra.Application.Queries.SoPenerimaan;
+using Cassandra.Application.Queries.SoRetur;
+using Cassandra.Application.Queries.Stock;
 using Cassandra.Application.Commands.AlokasiDiskon.CreateAlokasiDiskon;
 using Cassandra.Application.Commands.BiayaBiroJasa.CreateBiayaBiroJasa;
 using Cassandra.Application.Commands.BiayaBiroJasa.SetBiayaBiroJasaItems;
@@ -272,6 +284,30 @@ public static class DependencyInjection
         services.AddScoped<UpdatePelanggaranWilayahCommandHandler>();
         services.AddScoped<SetPelanggaranWilayahStatusCommandHandler>();
         services.AddScoped<GetPelanggaranWilayahsQueryHandler>();
+
+        // Phase 5: Inventory & Stock
+
+        // So
+        services.AddScoped<CreateSoCommandHandler>();
+        services.AddScoped<ChangeSoStatusCommandHandler>();
+        services.AddScoped<DeleteSoCommandHandler>();
+        services.AddScoped<GetSosQueryHandler>();
+
+        // Stock
+        services.AddScoped<ChangeStockStatusCommandHandler>();
+        services.AddScoped<GetStocksQueryHandler>();
+
+        // SoPenerimaan
+        services.AddScoped<CreateSoPenerimaanCommandHandler>();
+        services.AddScoped<GetSoPenerimaansQueryHandler>();
+
+        // SoRetur
+        services.AddScoped<CreateSoReturCommandHandler>();
+        services.AddScoped<GetSoRetursQueryHandler>();
+
+        // Mutasi
+        services.AddScoped<CreateMutasiCommandHandler>();
+        services.AddScoped<GetMutasisQueryHandler>();
 
         // Validators (all assemblies scanned from this project)
         services.AddValidatorsFromAssemblyContaining<LoginCommandHandler>();

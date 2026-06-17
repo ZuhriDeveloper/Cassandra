@@ -40,6 +40,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
 
     // Phase 4: Service Bureau & Finance Config
     public DbSet<SamsatReadModel> SamsatReadModels => Set<SamsatReadModel>();
+
     public DbSet<SamsatCityReadModel> SamsatCityReadModels => Set<SamsatCityReadModel>();
     public DbSet<BiroReadModel> BiroReadModels => Set<BiroReadModel>();
     public DbSet<BiayaBiroJasaReadModel> BiayaBiroJasaReadModels => Set<BiayaBiroJasaReadModel>();
@@ -47,6 +48,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
     public DbSet<ExpenseTypeReadModel> ExpenseTypeReadModels => Set<ExpenseTypeReadModel>();
     public DbSet<LedgerReadModel> LedgerReadModels => Set<LedgerReadModel>();
     public DbSet<PelanggaranWilayahReadModel> PelanggaranWilayahReadModels => Set<PelanggaranWilayahReadModel>();
+
+    // Phase 5: Inventory & Stock
+    public DbSet<SoReadModel> SoReadModels => Set<SoReadModel>();
+    public DbSet<SoItemReadModel> SoItemReadModels => Set<SoItemReadModel>();
+    public DbSet<StockReadModel> StockReadModels => Set<StockReadModel>();
+    public DbSet<SoPenerimaanReadModel> SoPenerimaanReadModels => Set<SoPenerimaanReadModel>();
+    public DbSet<SoPenerimaanItemMotorReadModel> SoPenerimaanItemMotorReadModels => Set<SoPenerimaanItemMotorReadModel>();
+    public DbSet<SoPenerimaanItemKelengkapanReadModel> SoPenerimaanItemKelengkapanReadModels => Set<SoPenerimaanItemKelengkapanReadModel>();
+    public DbSet<SoReturReadModel> SoReturReadModels => Set<SoReturReadModel>();
+    public DbSet<SoReturItemReadModel> SoReturItemReadModels => Set<SoReturItemReadModel>();
+    public DbSet<MutasiReadModel> MutasiReadModels => Set<MutasiReadModel>();
+    public DbSet<MutasiItemReadModel> MutasiItemReadModels => Set<MutasiItemReadModel>();
+    public DbSet<MutasiKelengkapanReadModel> MutasiKelengkapanReadModels => Set<MutasiKelengkapanReadModel>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -399,6 +413,114 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentDealer
             e.Property(x => x.UpdatedBy).HasMaxLength(100);
             e.HasIndex(x => new { x.DealerId, x.AreaCode }).IsUnique();
             e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        // ── Phase 5: Inventory & Stock ─────────────────────────────────────────
+
+        builder.Entity<SoReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SoNumber).HasMaxLength(50).IsRequired();
+            e.Property(x => x.PaymentType).HasMaxLength(10).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Total).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Subsidi).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CashDiscount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.PPn).HasColumnType("numeric(18,2)");
+            e.Property(x => x.TotalAmount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Df).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.SoNumber }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<SoItemReadModel>(e =>
+        {
+            e.HasKey(x => new { x.SoId, x.TipeMotorId, x.WarnaId });
+            e.Property(x => x.NettPrice).HasColumnType("numeric(18,2)");
+            // No dealer query filter — accessed via parent So
+        });
+
+        builder.Entity<StockReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.NoMesin).HasMaxLength(100).IsRequired();
+            e.Property(x => x.NoRangka).HasMaxLength(100).IsRequired();
+            e.Property(x => x.SuratJalanId).HasMaxLength(50).IsRequired();
+            e.Property(x => x.AssemblyYear).HasMaxLength(10).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
+            e.HasIndex(x => new { x.DealerId, x.NoMesin }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<SoPenerimaanReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SuratJalanId).HasMaxLength(50).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.HasIndex(x => new { x.DealerId, x.SuratJalanId }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<SoPenerimaanItemMotorReadModel>(e =>
+        {
+            e.HasKey(x => new { x.SoPenerimaanId, x.NoMesin });
+            e.Property(x => x.NoMesin).HasMaxLength(100).IsRequired();
+            e.Property(x => x.NoRangka).HasMaxLength(100).IsRequired();
+            e.Property(x => x.AssemblyYear).HasMaxLength(10).IsRequired();
+            // No dealer query filter — accessed via parent SoPenerimaan
+        });
+
+        builder.Entity<SoPenerimaanItemKelengkapanReadModel>(e =>
+        {
+            e.HasKey(x => new { x.SoPenerimaanId, x.KelengkapanId });
+            // No dealer query filter — accessed via parent SoPenerimaan
+        });
+
+        builder.Entity<SoReturReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ReturNumber).HasMaxLength(50).IsRequired();
+            e.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+            e.Property(x => x.Total).HasColumnType("numeric(18,2)");
+            e.Property(x => x.PPn).HasColumnType("numeric(18,2)");
+            e.Property(x => x.TotalAmount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.HasIndex(x => new { x.DealerId, x.ReturNumber }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<SoReturItemReadModel>(e =>
+        {
+            e.HasKey(x => new { x.SoReturId, x.TipeMotorId, x.WarnaId });
+            e.Property(x => x.NettPrice).HasColumnType("numeric(18,2)");
+            // No dealer query filter — accessed via parent SoRetur
+        });
+
+        builder.Entity<MutasiReadModel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.MutasiNumber).HasMaxLength(50).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
+            e.HasIndex(x => new { x.DealerId, x.MutasiNumber }).IsUnique();
+            e.HasQueryFilter(x => CurrentDealerId == null || x.DealerId == CurrentDealerId);
+        });
+
+        builder.Entity<MutasiItemReadModel>(e =>
+        {
+            e.HasKey(x => new { x.MutasiId, x.NoMesin });
+            e.Property(x => x.NoMesin).HasMaxLength(100).IsRequired();
+            // No dealer query filter — accessed via parent Mutasi
+        });
+
+        builder.Entity<MutasiKelengkapanReadModel>(e =>
+        {
+            e.HasKey(x => new { x.MutasiId, x.KelengkapanName });
+            e.Property(x => x.KelengkapanName).HasMaxLength(200).IsRequired();
+            // No dealer query filter — accessed via parent Mutasi
         });
     }
 }
