@@ -1,0 +1,23 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Copy project files first for restore layer caching
+COPY Cassandra.Backend/Cassandra.Domain/Cassandra.Domain.csproj                 Cassandra.Backend/Cassandra.Domain/
+COPY Cassandra.Backend/Cassandra.Application/Cassandra.Application.csproj        Cassandra.Backend/Cassandra.Application/
+COPY Cassandra.Backend/Cassandra.Infrastructure/Cassandra.Infrastructure.csproj Cassandra.Backend/Cassandra.Infrastructure/
+COPY Cassandra.Backend/Cassandra.WebApi/Cassandra.WebApi.csproj                 Cassandra.Backend/Cassandra.WebApi/
+COPY Cassandra.ServiceDefaults/Cassandra.ServiceDefaults.csproj                 Cassandra.ServiceDefaults/
+RUN dotnet restore Cassandra.Backend/Cassandra.WebApi/Cassandra.WebApi.csproj
+
+COPY Cassandra.Backend/ Cassandra.Backend/
+COPY Cassandra.ServiceDefaults/ Cassandra.ServiceDefaults/
+RUN dotnet publish Cassandra.Backend/Cassandra.WebApi/Cassandra.WebApi.csproj \
+    -c Release -o /app/publish --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish .
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+USER app
+ENTRYPOINT ["dotnet", "Cassandra.WebApi.dll"]

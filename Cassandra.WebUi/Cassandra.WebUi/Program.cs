@@ -4,11 +4,24 @@ using Cassandra.WebUi.Components;
 using Cassandra.WebUi.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+// Behind the edge Caddy (TLS terminated upstream) the app receives plain HTTP. Trust the
+// proxy's X-Forwarded-Proto so scheme detection is correct — without this, UseHttpsRedirection
+// sees "http" and 307-redirects to https on every request (an infinite loop), and auth cookies
+// are not flagged Secure. Caddy is a Docker container (not loopback), so clear the default
+// known-proxy allowlist: only the reverse proxy can reach this container's port.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddMudServices();
 builder.Services.AddScoped<ThemeState>();
@@ -56,6 +69,8 @@ builder.Services.AddHttpClient<MasterDataApiClient>(client =>
     .AddHttpMessageHandler<BearerTokenHandler>();
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {

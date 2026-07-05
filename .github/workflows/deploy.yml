@@ -1,0 +1,71 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Test
+        run: dotnet test -c Release --no-build --verbosity normal
+
+  build-push:
+    name: Build & Push Images
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lowercase the image owner (Docker requires lowercase names)
+        run: echo "OWNER_LC=${OWNER,,}" >> "$GITHUB_ENV"
+        env:
+          OWNER: ${{ github.repository_owner }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push webapi image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.webapi
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER_LC }}/cassandra-webapi:latest
+            ${{ env.REGISTRY }}/${{ env.OWNER_LC }}/cassandra-webapi:${{ github.sha }}
+
+      - name: Build and push webui image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.webui
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER_LC }}/cassandra-webui:latest
+            ${{ env.REGISTRY }}/${{ env.OWNER_LC }}/cassandra-webui:${{ github.sha }}
+
+      # Deployment is handled on the VPS by the central Watchtower (vps-infra/edge), which polls
+      # GHCR and auto-updates the labeled cassandra-webapi / cassandra-webui containers.

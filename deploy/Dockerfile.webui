@@ -1,0 +1,28 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Copy project files first for restore layer caching (WebUi + its WASM Client + ServiceDefaults)
+COPY Cassandra.WebUi/Cassandra.WebUi/Cassandra.WebUi.csproj               Cassandra.WebUi/Cassandra.WebUi/
+COPY Cassandra.WebUi/Cassandra.WebUi.Client/Cassandra.WebUi.Client.csproj Cassandra.WebUi/Cassandra.WebUi.Client/
+COPY Cassandra.ServiceDefaults/Cassandra.ServiceDefaults.csproj           Cassandra.ServiceDefaults/
+RUN dotnet restore Cassandra.WebUi/Cassandra.WebUi/Cassandra.WebUi.csproj
+
+COPY Cassandra.WebUi/ Cassandra.WebUi/
+COPY Cassandra.ServiceDefaults/ Cassandra.ServiceDefaults/
+# Do NOT add --no-restore here. The framework static-web-assets package that ships
+# blazor.web.js is only added to the restore graph during publish (same reason documented in
+# Materia's Dockerfile.webui). Most packages are already cached from the restore layer above.
+RUN dotnet publish Cassandra.WebUi/Cassandra.WebUi/Cassandra.WebUi.csproj \
+    -c Release -o /app/publish
+
+# Guard: fail the image build (not production) if the Blazor Web App boot script did not ship.
+RUN test -s /app/publish/wwwroot/_framework/blazor.web.js \
+    || (echo "BUILD FAILED: /app/publish/wwwroot/_framework/blazor.web.js missing or empty — Blazor Web App static assets did not publish." && exit 1)
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish .
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+USER app
+ENTRYPOINT ["dotnet", "Cassandra.WebUi.dll"]
