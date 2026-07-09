@@ -2,6 +2,7 @@ using Cassandra.Application;
 using Cassandra.Domain.Common;
 using Cassandra.Infrastructure;
 using Cassandra.Infrastructure.Persistence;
+using Cassandra.WebApi.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,7 @@ builder.AddServiceDefaults();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddAuthRateLimiting();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -35,6 +37,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 // Return domain rule violations as 400 Bad Request instead of 500
 app.Use(async (ctx, next) =>

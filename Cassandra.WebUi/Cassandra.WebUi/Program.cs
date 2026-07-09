@@ -68,6 +68,10 @@ builder.Services.AddHttpClient<MasterDataApiClient>(client =>
     client.BaseAddress = new Uri(apiBaseUrl))
     .AddHttpMessageHandler<BearerTokenHandler>();
 
+builder.Services.AddHttpClient<AccountApiClient>(client =>
+    client.BaseAddress = new Uri(apiBaseUrl))
+    .AddHttpMessageHandler<BearerTokenHandler>();
+
 var app = builder.Build();
 
 app.UseForwardedHeaders();

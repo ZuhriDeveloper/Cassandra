@@ -43,6 +43,12 @@
                         @(context.User.Identity?.Name?[..1].ToUpperInvariant() ?? "?")
                     </MudAvatar>
                 </MudTooltip>
+                <MudTooltip Text="Ubah Kata Sandi" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Filled.ManageAccounts"
+                                   Color="Color.Inherit"
+                                   Href="account/change-password"
+                                   Size="Size.Small" />
+                </MudTooltip>
                 <form method="post" action="/account/logout">
                     <AntiforgeryToken />
                     <MudTooltip Text="Keluar" Placement="Placement.Bottom">
