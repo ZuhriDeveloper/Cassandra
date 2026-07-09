@@ -34,6 +34,15 @@ public class SmtpEmailSender(IConfiguration configuration, ILogger<SmtpEmailSend
         message.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
 
         using var client = new SmtpClient();
+
+        // The server certificate is still fully validated against the system trust store; we only
+        // turn OFF the revocation (CRL/OCSP) check. MailKit enables revocation checking by default,
+        // and in containers the CRL distribution points are frequently unreachable — which aborts
+        // the handshake with "unable to get certificate CRL" even though Brevo's certificate is
+        // otherwise valid. Disabling revocation is the standard remedy here and is NOT the same as
+        // trusting any certificate (which would defeat TLS).
+        client.CheckCertificateRevocation = false;
+
         // StartTls for real providers (587); None for the local Mailpit catcher (1025).
         var socketOptions = useStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
         await client.ConnectAsync(host, port, socketOptions, cancellationToken);
