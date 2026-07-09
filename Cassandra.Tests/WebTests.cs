@@ -2,6 +2,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Cassandra.Tests;
 
+// Aspire end-to-end smoke test: boots the full orchestrated stack (Postgres container +
+// WebApi + WebUI). It needs Docker and is excluded from the CI unit-test gate via the
+// "Integration" category — run it locally with `dotnet test` (no filter) or explicitly with
+// `dotnet test --filter Category=Integration`.
+[Trait("Category", "Integration")]
 public class WebTests
 {
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);

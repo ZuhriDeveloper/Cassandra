@@ -22,7 +22,9 @@ jobs:
         run: dotnet build -c Release
 
       - name: Test
-        run: dotnet test -c Release --no-build --verbosity normal
+        # Exclude the Aspire end-to-end smoke test (Category=Integration): it boots the full
+        # orchestrated stack via Docker and is too slow/flaky for the deploy gate. Unit tests only.
+        run: dotnet test -c Release --no-build --verbosity normal --filter "Category!=Integration"
 
   build-push:
     name: Build & Push Images
