@@ -1,0 +1,200 @@
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.pg-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .75rem 1rem;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    position: sticky;
+    top: 0;
+    background: var(--mud-palette-surface);
+    z-index: 2;
+}
+
+.pg-header-title {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.pg-header-text {
+    font-weight: 700;
+}
+
+/* ── Body ───────────────────────────────────────────────────────────────── */
+.pg-body {
+    padding: 1rem 1.15rem 2rem;
+    overflow-y: auto;
+    height: calc(100% - 57px);
+}
+
+.pg-title {
+    font-weight: 700;
+    line-height: 1.25;
+    margin-bottom: .25rem;
+}
+
+.pg-section {
+    margin-top: 1.1rem;
+}
+
+.pg-kicker {
+    text-transform: uppercase;
+    font-size: .68rem;
+    letter-spacing: .07em;
+    font-weight: 700;
+    color: var(--mud-palette-primary);
+    margin-bottom: .4rem;
+}
+
+.pg-text {
+    color: var(--mud-palette-text-primary);
+    line-height: 1.5;
+}
+
+.pg-access {
+    display: flex;
+    align-items: flex-start;
+    gap: .4rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ── Steps ──────────────────────────────────────────────────────────────── */
+.pg-steps {
+    margin: 0;
+    padding-left: 1.15rem;
+    color: var(--mud-palette-text-primary);
+}
+
+.pg-steps li {
+    margin-bottom: .35rem;
+    line-height: 1.45;
+    font-size: .875rem;
+}
+
+/* ── Search ─────────────────────────────────────────────────────────────── */
+.pg-search {
+    margin-bottom: .75rem;
+}
+
+/* ── Field card ─────────────────────────────────────────────────────────── */
+.pg-field {
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    padding: .6rem .7rem;
+    margin-bottom: .55rem;
+    background: var(--mud-palette-background-grey);
+}
+
+.pg-field-head {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-bottom: .25rem;
+}
+
+.pg-field-label {
+    font-weight: 700;
+    font-size: .9rem;
+    color: var(--mud-palette-text-primary);
+}
+
+.pg-field-desc {
+    font-size: .82rem;
+    color: var(--mud-palette-text-secondary);
+    line-height: 1.4;
+}
+
+.pg-vals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem;
+    margin-top: .45rem;
+}
+
+.pg-example {
+    margin-top: .4rem;
+    font-size: .8rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.pg-example-label {
+    font-weight: 700;
+}
+
+/* ── Chips ──────────────────────────────────────────────────────────────── */
+.pg-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: .72rem;
+    line-height: 1;
+    padding: .28em .6em;
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.pg-req {
+    color: var(--mud-palette-error-text, #fff);
+    background: var(--mud-palette-error);
+}
+
+.pg-opt {
+    color: var(--mud-palette-text-secondary);
+    background: transparent;
+    border: 1px solid var(--mud-palette-divider);
+}
+
+.pg-val {
+    color: var(--mud-palette-primary);
+    background: transparent;
+    border: 1px solid var(--mud-palette-primary);
+}
+
+.pg-status {
+    font-family: var(--mud-typography-caption-family, monospace);
+    letter-spacing: .03em;
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-background-grey);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 6px;
+}
+
+/* ── Status rows ────────────────────────────────────────────────────────── */
+.pg-status-row {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    margin-bottom: .4rem;
+}
+
+.pg-status-meaning {
+    font-size: .82rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ── Note ───────────────────────────────────────────────────────────────── */
+.pg-note {
+    display: flex;
+    align-items: flex-start;
+    gap: .5rem;
+    margin-top: 1.2rem;
+    padding: .7rem .8rem;
+    border-radius: 8px;
+    background: var(--mud-palette-warning-hover, rgba(255, 152, 0, .12));
+    border-left: 3px solid var(--mud-palette-warning);
+}
+
+.pg-note-icon {
+    color: var(--mud-palette-warning);
+    flex-shrink: 0;
+    margin-top: .1rem;
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+.pg-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--mud-palette-text-secondary);
+}

@@ -1,0 +1,216 @@
+@using Cassandra.WebUi.Components.Help
+@using Cassandra.WebUi.Services
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+@inject NavigationManager Nav
+@inject PageGuideProvider Guides
+
+<MudDrawer Open="Open" OpenChanged="SetOpen"
+           Anchor="Anchor.Right"
+           Variant="DrawerVariant.Temporary"
+           Overlay="true"
+           Elevation="6"
+           Width="440px"
+           Class="pg-drawer">
+
+    <div class="pg-header">
+        <div class="pg-header-title">
+            <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Primary" Size="Size.Medium" />
+            <MudText Typo="Typo.subtitle1" Class="pg-header-text">Panduan Halaman</MudText>
+        </div>
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                       aria-label="Tutup" OnClick="Close" />
+    </div>
+
+    <div class="pg-body">
+        @if (_guide is null)
+        {
+            <div class="pg-empty">
+                <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Large" Color="Color.Default" />
+                <MudText Typo="Typo.body1" Class="mt-2" Style="font-weight:600">
+                    Panduan untuk halaman ini belum tersedia
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                    Gunakan menu di samping untuk membuka halaman yang memiliki panduan
+                    (mis. Master Data, Inventori, Penjualan, atau Dokumen).
+                </MudText>
+            </div>
+        }
+        else
+        {
+            <MudText Typo="Typo.h6" Class="pg-title">@_guide.Title</MudText>
+
+            @* ── Tujuan ── *@
+            <section class="pg-section">
+                <div class="pg-kicker">Tujuan Halaman</div>
+                <MudText Typo="Typo.body2" Class="pg-text">@_guide.Purpose</MudText>
+            </section>
+
+            @* ── Hak Akses ── *@
+            @if (!string.IsNullOrWhiteSpace(_guide.Access))
+            {
+                <section class="pg-section">
+                    <div class="pg-kicker">Hak Akses</div>
+                    <div class="pg-access">
+                        <MudIcon Icon="@Icons.Material.Filled.Badge" Size="Size.Small" />
+                        <MudText Typo="Typo.body2" Class="pg-text">@_guide.Access</MudText>
+                    </div>
+                </section>
+            }
+
+            @* ── Langkah ── *@
+            @if (_guide.Steps.Count > 0)
+            {
+                <section class="pg-section">
+                    <div class="pg-kicker">Langkah Penggunaan</div>
+                    <ol class="pg-steps">
+                        @foreach (var s in _guide.Steps)
+                        {
+                            <li>@s</li>
+                        }
+                    </ol>
+                </section>
+            }
+
+            @* ── Field ── *@
+            @if (_guide.Fields.Count > 0)
+            {
+                <section class="pg-section">
+                    <div class="pg-kicker">Penjelasan Field &amp; Validasi</div>
+
+                    <MudTextField T="string" @bind-Value="_search" Immediate="true"
+                                  Placeholder="Cari field…" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" Clearable="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Class="pg-search" />
+
+                    @{ var fields = FilteredFields().ToList(); }
+                    @if (fields.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pg-text">
+                            Tidak ada field yang cocok dengan "@_search".
+                        </MudText>
+                    }
+                    else
+                    {
+                        @foreach (var f in fields)
+                        {
+                            <div class="pg-field">
+                                <div class="pg-field-head">
+                                    <span class="pg-field-label">@f.Label</span>
+                                    @if (f.Required)
+                                    {
+                                        <span class="pg-chip pg-req">Wajib</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="pg-chip pg-opt">Opsional</span>
+                                    }
+                                </div>
+                                <div class="pg-field-desc">@f.Description</div>
+                                @if (f.Validations.Count > 0)
+                                {
+                                    <div class="pg-vals">
+                                        @foreach (var v in f.Validations)
+                                        {
+                                            <span class="pg-chip pg-val">@v</span>
+                                        }
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(f.Example))
+                                {
+                                    <div class="pg-example">
+                                        <span class="pg-example-label">Contoh:</span> @f.Example
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </section>
+            }
+
+            @* ── Status / Alur ── *@
+            @if (_guide.Statuses.Count > 0)
+            {
+                <section class="pg-section">
+                    <div class="pg-kicker">Status / Alur Proses</div>
+                    @foreach (var st in _guide.Statuses)
+                    {
+                        <div class="pg-status-row">
+                            <span class="pg-chip pg-status">@st.Status</span>
+                            <span class="pg-status-meaning">@st.Meaning</span>
+                        </div>
+                    }
+                </section>
+            }
+
+            @* ── Catatan ── *@
+            @if (!string.IsNullOrWhiteSpace(_guide.Notes))
+            {
+                <div class="pg-note">
+                    <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" Class="pg-note-icon" />
+                    <MudText Typo="Typo.body2" Class="pg-text"><b>Catatan:</b> @_guide.Notes</MudText>
+                </div>
+            }
+        }
+    </div>
+</MudDrawer>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+
+    private PageGuide? _guide;
+    private string? _search;
+    private bool _wasOpen;
+
+    protected override void OnInitialized()
+        => Nav.LocationChanged += OnLocationChanged;
+
+    protected override void OnParametersSet()
+    {
+        // Ambil panduan berdasarkan rute aktif hanya saat panel baru dibuka,
+        // agar re-render lain (mis. ganti tema) tidak mereset pencarian.
+        if (Open && !_wasOpen)
+        {
+            _search = null;
+            _guide = Guides.Get(CurrentPath());
+        }
+        _wasOpen = Open;
+    }
+
+    private string CurrentPath()
+        => "/" + Nav.ToBaseRelativePath(Nav.Uri);
+
+    private async Task SetOpen(bool value)
+    {
+        if (Open == value) return;
+        Open = value;
+        await OpenChanged.InvokeAsync(value);
+    }
+
+    private Task Close() => SetOpen(false);
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        // Tutup panel saat berpindah halaman agar konteks tidak keliru.
+        if (Open)
+            _ = SetOpen(false);
+    }
+
+    private IEnumerable<FieldGuide> FilteredFields()
+    {
+        if (_guide is null) return [];
+        if (string.IsNullOrWhiteSpace(_search)) return _guide.Fields;
+
+        var q = _search.Trim();
+        return _guide.Fields.Where(f =>
+            f.Label.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+            f.Description.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+            f.Validations.Any(v => v.Contains(q, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    public void Dispose()
+        => Nav.LocationChanged -= OnLocationChanged;
+}

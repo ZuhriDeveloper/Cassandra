@@ -26,6 +26,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddMudServices();
 builder.Services.AddScoped<ThemeState>();
 
+// In-app page guide content (static registry) surfaced by the "Panduan" panel.
+builder.Services.AddSingleton<PageGuideProvider>();
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();

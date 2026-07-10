@@ -26,6 +26,12 @@
 
         <MudSpacer />
 
+        <MudTooltip Text="Panduan halaman ini" Placement="Placement.Bottom">
+            <MudIconButton Icon="@Icons.Material.Filled.HelpOutline"
+                           Color="Color.Inherit"
+                           OnClick="@(() => _guideOpen = true)" />
+        </MudTooltip>
+
         <MudTooltip Text="@(ThemeState.IsDarkMode ? "Mode Terang" : "Mode Gelap")"
                     Placement="Placement.Bottom">
             <MudIconButton Icon="@(ThemeState.IsDarkMode
@@ -95,6 +101,8 @@
         </MudContainer>
     </MudMainContent>
 
+    <PageGuidePanel @bind-Open="_guideOpen" />
+
 </MudLayout>
 
 <div id="blazor-error-ui" data-nosnippet>
@@ -105,6 +113,7 @@
 
 @code {
     private bool _drawerOpen = true;
+    private bool _guideOpen;
 
     protected override void OnInitialized()
         => ThemeState.OnChanged += OnThemeChanged;
