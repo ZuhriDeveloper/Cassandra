@@ -83,7 +83,7 @@
     border-radius: 8px;
     padding: .6rem .7rem;
     margin-bottom: .55rem;
-    background: var(--mud-palette-background-grey);
+    background: var(--mud-palette-background);
 }
 
 .pg-field-head {
@@ -156,7 +156,7 @@
     font-family: var(--mud-typography-caption-family, monospace);
     letter-spacing: .03em;
     color: var(--mud-palette-text-primary);
-    background: var(--mud-palette-background-grey);
+    background: var(--mud-palette-background);
     border: 1px solid var(--mud-palette-divider);
     border-radius: 6px;
 }
@@ -182,7 +182,8 @@
     margin-top: 1.2rem;
     padding: .7rem .8rem;
     border-radius: 8px;
-    background: var(--mud-palette-warning-hover, rgba(255, 152, 0, .12));
+    /* Tint hangat yang terbaca baik di light maupun dark. */
+    background: rgba(217, 119, 6, .12);
     border-left: 3px solid var(--mud-palette-warning);
 }
 

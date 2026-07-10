@@ -5,13 +5,20 @@
 @inject NavigationManager Nav
 @inject PageGuideProvider Guides
 
+@* Panel mengikuti tema konten utama (Surface), bukan warna drawer (sidebar) yang
+   selalu gelap. Remap variabel drawer ke surface/teks agar adaptif light/dark. *@
 <MudDrawer Open="Open" OpenChanged="SetOpen"
            Anchor="Anchor.Right"
            Variant="DrawerVariant.Temporary"
            Overlay="true"
            Elevation="6"
            Width="440px"
-           Class="pg-drawer">
+           Class="pg-drawer"
+           Style="background:var(--mud-palette-surface)!important;
+                  color:var(--mud-palette-text-primary);
+                  --mud-palette-drawer-background:var(--mud-palette-surface);
+                  --mud-palette-drawer-text:var(--mud-palette-text-primary);
+                  --mud-palette-drawer-icon:var(--mud-palette-text-primary);">
 
     <div class="pg-header">
         <div class="pg-header-title">
