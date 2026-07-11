@@ -1,524 +1,529 @@
 @page "/dealer/registrasi-penjualan"
 @attribute [Authorize(Roles = "Admin,Sales,Cashier")]
 @rendermode InteractiveServer
+@using System.Globalization
 @using Cassandra.WebUi.Services
 @inject MasterDataApiClient Api
 
 <PageTitle>Registrasi Penjualan — Cassandra</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0 fw-bold">Registrasi Penjualan</h4>
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h5">Registrasi Penjualan</MudText>
     <AuthorizeView Roles="Admin,Sales">
-        <button class="btn btn-primary" @onclick="ToggleCreate">
-            <i class="bi bi-plus-lg me-1"></i>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false"
+                   StartIcon="@(_showCreate ? Icons.Material.Filled.Close : Icons.Material.Filled.Add)"
+                   OnClick="ToggleCreate">
             @(_showCreate ? "Tutup Form" : "Tambah Penjualan")
-        </button>
+        </MudButton>
     </AuthorizeView>
-</div>
+</MudStack>
 
 @if (_errors.Count > 0)
 {
-    <div class="alert alert-danger alert-dismissible">
-        <ul class="mb-0 ps-3">
+    <MudAlert Severity="Severity.Error" Class="mb-4"
+              ShowCloseIcon="true" CloseIconClicked="@(() => _errors.Clear())">
+        <ul class="my-0 pl-4">
             @foreach (var e in _errors)
             {
                 <li>@e</li>
             }
         </ul>
-        <button type="button" class="btn-close" @onclick="() => _errors.Clear()"></button>
-    </div>
+    </MudAlert>
 }
 @if (!string.IsNullOrEmpty(_notice))
 {
-    <div class="alert alert-success alert-dismissible">
+    <MudAlert Severity="Severity.Success" Class="mb-4"
+              ShowCloseIcon="true" CloseIconClicked="@(() => _notice = null)">
         @_notice
-        <button type="button" class="btn-close" @onclick="() => _notice = null"></button>
-    </div>
+    </MudAlert>
 }
 
 @* ── Create form ── *@
 @if (_showCreate)
 {
-    <div class="card mb-4">
-        <div class="card-header fw-semibold">
-            <i class="bi bi-plus-circle me-1"></i> Tambah Registrasi Penjualan Baru
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                @* Left column — header *@
-                <div class="col-md-6">
-                    <h6 class="fw-semibold text-muted mb-3">Data Kendaraan &amp; Penjualan</h6>
+    <MudCard Outlined="true" Elevation="0" Class="mb-4" Style="max-width:1100px">
 
-                    <div class="mb-3">
-                        <label class="form-label">No. Penjualan <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" @bind="_noPenjualan" placeholder="cth. PJ-2025-001" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tanggal Penjualan <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" value="@_saleDate.ToString("yyyy-MM-dd")"
-                               @onchange="e => _saleDate = DateOnly.Parse(e.Value?.ToString() ?? _saleDate.ToString())" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Sales / Karyawan <span class="text-danger">*</span></label>
-                        <InputSelect class="form-select" @bind-Value="_karyawanId">
-                            <option value="">— Pilih Karyawan —</option>
-                            @foreach (var k in (_karyawans ?? []).Where(k => k.IsActive))
-                            {
-                                <option value="@k.Id">@k.Name</option>
-                            }
-                        </InputSelect>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Kios <span class="text-danger">*</span></label>
-                        <InputSelect class="form-select" @bind-Value="_kiosId">
-                            <option value="">— Pilih Kios —</option>
-                            @foreach (var k in (_kiosList ?? []).Where(k => k.IsActive))
-                            {
-                                <option value="@k.Id">@k.Code — @k.Name</option>
-                            }
-                        </InputSelect>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Mediator <span class="text-muted small">(opsional)</span></label>
-                        <InputSelect class="form-select" @bind-Value="_mediatorId">
-                            <option value="">— Tanpa Mediator —</option>
-                            @foreach (var m in (_mediators ?? []).Where(m => m.IsActive))
-                            {
-                                <option value="@m.Id">@m.Name</option>
-                            }
-                        </InputSelect>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">No. Mesin <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control font-monospace" @bind="_noMesin"
-                               @bind:event="oninput"
-                               @onblur="OnNoMesinBlur"
-                               placeholder="Nomor mesin unit" />
-                        <div class="form-text">Tab keluar untuk auto-isi No. Rangka dari stok.</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">No. Rangka <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control font-monospace" @bind="_noRangka" placeholder="Nomor rangka unit" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Metode Penjualan <span class="text-danger">*</span></label>
-                        <div class="d-flex gap-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="metodePenjualan" id="metodeCash"
-                                       value="CASH" checked="@(_metodePenjualan == "CASH")"
-                                       @onchange="@(_ => OnMetodeChanged("CASH"))" />
-                                <label class="form-check-label" for="metodeCash">CASH</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="metodePenjualan" id="metodeCredit"
-                                       value="CREDIT" checked="@(_metodePenjualan == "CREDIT")"
-                                       @onchange="@(_ => OnMetodeChanged("CREDIT"))" />
-                                <label class="form-check-label" for="metodeCredit">CREDIT</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tipe Penjualan <span class="text-danger">*</span></label>
-                        <InputSelect class="form-select" @bind-Value="_tipePenjualan">
-                            <option value="DIRECT">DIRECT</option>
-                            <option value="KIOS">KIOS</option>
-                            <option value="MEDIATOR">MEDIATOR</option>
-                        </InputSelect>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">No. Serah Terima Kendaraan <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" @bind="_serahTerimaKendaraanId" placeholder="No. STK" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">No. Tanda Terima Sementara <span class="text-muted small">(opsional)</span></label>
-                        <input type="text" class="form-control" @bind="_tandaTerimaSementaraId" placeholder="No. TTS" />
-                    </div>
-                </div>
+        <MudCardHeader Class="pb-2">
+            <CardHeaderAvatar>
+                <MudAvatar Color="Color.Primary" Variant="Variant.Outlined" Rounded="true">
+                    <MudIcon Icon="@Icons.Material.Outlined.TwoWheeler" />
+                </MudAvatar>
+            </CardHeaderAvatar>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Tambah Registrasi Penjualan Baru</MudText>
+                <MudText Typo="Typo.body2" Style="color:var(--mud-palette-text-secondary)">
+                    Catat penjualan unit baru — kolom bertanda * wajib diisi.
+                </MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
 
-                @* Right column — financial *@
-                <div class="col-md-6">
-                    <h6 class="fw-semibold text-muted mb-3">Data Finansial</h6>
+        <MudCardContent Class="pt-2">
 
-                    <div class="mb-3">
-                        <label class="form-label">Harga Total <span class="text-danger">*</span></label>
-                        <InputNumber class="form-control" @bind-Value="_total" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Off Road</label>
-                        <InputNumber class="form-control" @bind-Value="_offRoad" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">BBN</label>
-                        <InputNumber class="form-control" @bind-Value="_bbn" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Diskon yang Diminta</label>
-                        <InputNumber class="form-control" @bind-Value="_discount" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Ambil Uang</label>
-                        <InputNumber class="form-control" @bind-Value="_ambilUang" />
-                    </div>
+            @* ── Data kendaraan & penjualan ── *@
+            <MudText Typo="Typo.overline" Style="color:var(--mud-palette-text-secondary)">
+                Data Kendaraan &amp; Penjualan
+            </MudText>
+            <MudGrid Spacing="3" Class="mt-0">
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField T="string" @bind-Value="_noPenjualan"
+                                  Label="No. Penjualan" Placeholder="cth. PJ-2025-001" Required="true"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudDatePicker @bind-Date="SaleDateProxy"
+                                   Label="Tanggal Penjualan" DateFormat="dd/MM/yyyy" Editable="true"
+                                   AdornmentIcon="@Icons.Material.Outlined.CalendarMonth"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudSelect T="Guid" @bind-Value="_karyawanId"
+                               Label="Sales / Karyawan" Placeholder="— Pilih Karyawan —"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" Dense="true">
+                        @foreach (var k in (_karyawans ?? []).Where(k => k.IsActive))
+                        {
+                            <MudSelectItem T="Guid" Value="@k.Id">@k.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudSelect T="Guid" @bind-Value="_kiosId"
+                               Label="Kios" Placeholder="— Pilih Kios —"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" Dense="true">
+                        @foreach (var k in (_kiosList ?? []).Where(k => k.IsActive))
+                        {
+                            <MudSelectItem T="Guid" Value="@k.Id">@k.Code — @k.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudSelect T="Guid?" @bind-Value="_mediatorId"
+                               Label="Mediator" Placeholder="— Tanpa Mediator —"
+                               Clearable="true" HelperText="Opsional"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" Dense="true">
+                        @foreach (var m in (_mediators ?? []).Where(m => m.IsActive))
+                        {
+                            <MudSelectItem T="Guid?" Value="@((Guid?)m.Id)">@m.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudSelect T="string" @bind-Value="_tipePenjualan"
+                               Label="Tipe Penjualan"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" Dense="true">
+                        <MudSelectItem T="string" Value="@("DIRECT")">DIRECT</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("KIOS")">KIOS</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("MEDIATOR")">MEDIATOR</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField T="string" @bind-Value="_noMesin"
+                                  Label="No. Mesin" Placeholder="Nomor mesin unit" Required="true"
+                                  Immediate="true" OnBlur="OnNoMesinBlur" Class="mono"
+                                  HelperText="Tab keluar untuk auto-isi No. Rangka dari stok."
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField T="string" @bind-Value="_noRangka"
+                                  Label="No. Rangka" Placeholder="Nomor rangka unit" Required="true" Class="mono"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField T="string" @bind-Value="_serahTerimaKendaraanId"
+                                  Label="No. Serah Terima Kendaraan" Placeholder="No. STK" Required="true"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField T="string" @bind-Value="_tandaTerimaSementaraId"
+                                  Label="No. Tanda Terima Sementara" Placeholder="No. TTS" HelperText="Opsional"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+            </MudGrid>
 
-                    @if (_metodePenjualan == "CREDIT")
-                    {
-                        <div class="mb-3">
-                            <label class="form-label">DP (Uang Muka)</label>
-                            <InputNumber class="form-control" @bind-Value="_dp" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Angsuran / Bulan</label>
-                            <InputNumber class="form-control" @bind-Value="_angsuran" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Daftar Harga Leasing</label>
-                            <InputSelect class="form-select" @bind-Value="_daftarHargaLeasingId">
-                                <option value="">— Pilih Daftar Harga Leasing —</option>
-                                @foreach (var d in (_daftarHargaLeasings ?? []).Where(d => d.IsActive))
-                                {
-                                    <option value="@d.Id">@d.Name</option>
-                                }
-                            </InputSelect>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Tenor Code <span class="text-muted small">(opsional)</span></label>
-                            <input type="text" class="form-control" @bind="_tenorCode" placeholder="cth. T24" />
-                        </div>
-                    }
+            <MudDivider Class="my-5" />
 
-                    <h6 class="fw-semibold text-muted mb-3 mt-4">Data Konsumen</h6>
-                    <div class="mb-3">
-                        <label class="form-label">Nama Konsumen <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" @bind="_namaCustomer" placeholder="Nama lengkap" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Alamat <span class="text-danger">*</span></label>
-                        <textarea class="form-control" rows="2" @bind="_address" placeholder="Alamat lengkap"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Telepon <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" @bind="_phone" placeholder="No. telepon utama" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Telepon 1 <span class="text-muted small">(opsional)</span></label>
-                        <input type="text" class="form-control" @bind="_phone1" placeholder="No. telepon alternatif" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Telepon 2 <span class="text-muted small">(opsional)</span></label>
-                        <input type="text" class="form-control" @bind="_phone2" placeholder="No. telepon alternatif 2" />
-                    </div>
-                </div>
-            </div>
+            @* ── Data finansial ── *@
+            <MudText Typo="Typo.overline" Style="color:var(--mud-palette-text-secondary)">
+                Data Finansial
+            </MudText>
 
-            @* Kelengkapan section *@
-            <div class="mt-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-semibold">Kelengkapan <span class="text-muted small">(opsional)</span></span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AddKelengkapan">
-                        <i class="bi bi-plus-lg"></i> Tambah
-                    </button>
-                </div>
-                @if (_kelengkapan.Count > 0)
+            <MudText Typo="Typo.caption" Class="mt-2 mb-1 d-block"
+                     Style="color:var(--mud-palette-text-secondary);font-weight:600">
+                Metode Penjualan *
+            </MudText>
+            <MudToggleGroup T="string" Value="@_metodePenjualan" ValueChanged="OnMetodeChanged"
+                            SelectionMode="SelectionMode.SingleSelection"
+                            Color="Color.Primary" CheckMark="false" Delimiters="false" Ripple="false"
+                            Class="segmented d-inline-flex" SelectedClass="segmented-selected" Size="Size.Small">
+                <MudToggleItem T="string" Value="@("CASH")">
+                    <MudIcon Icon="@Icons.Material.Outlined.Payments" Size="Size.Small" Class="mr-2" />CASH
+                </MudToggleItem>
+                <MudToggleItem T="string" Value="@("CREDIT")">
+                    <MudIcon Icon="@Icons.Material.Outlined.CreditCard" Size="Size.Small" Class="mr-2" />CREDIT
+                </MudToggleItem>
+            </MudToggleGroup>
+
+            <MudGrid Spacing="3" Class="mt-1">
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField T="decimal" @bind-Value="_total"
+                                     Label="Harga Total" Required="true"
+                                     Adornment="Adornment.Start" AdornmentText="Rp"
+                                     Format="N0" Culture="@IdCulture" HideSpinButtons="true" Min="0"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField T="decimal" @bind-Value="_offRoad"
+                                     Label="Off Road"
+                                     Adornment="Adornment.Start" AdornmentText="Rp"
+                                     Format="N0" Culture="@IdCulture" HideSpinButtons="true" Min="0"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField T="decimal" @bind-Value="_bbn"
+                                     Label="BBN"
+                                     Adornment="Adornment.Start" AdornmentText="Rp"
+                                     Format="N0" Culture="@IdCulture" HideSpinButtons="true" Min="0"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField T="decimal" @bind-Value="_discount"
+                                     Label="Diskon yang Diminta"
+                                     Adornment="Adornment.Start" AdornmentText="Rp"
+                                     Format="N0" Culture="@IdCulture" HideSpinButtons="true" Min="0"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField T="decimal" @bind-Value="_ambilUang"
+                                     Label="Ambil Uang"
+                                     Adornment="Adornment.Start" AdornmentText="Rp"
+                                     Format="N0" Culture="@IdCulture" HideSpinButtons="true" Min="0"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+
+                @if (_metodePenjualan == "CREDIT")
                 {
-                    <div class="row g-2">
-                        @foreach (var (item, idx) in _kelengkapan.Select((v, i) => (v, i)))
-                        {
-                            <div class="col-md-4">
-                                <div class="input-group input-group-sm">
-                                    <input type="text" class="form-control" value="@item"
-                                           @onchange="e => _kelengkapan[idx] = e.Value?.ToString() ?? string.Empty"
-                                           list="kelengkapan-datalist"
-                                           placeholder="Nama kelengkapan" />
-                                    <button type="button" class="btn btn-outline-danger"
-                                            @onclick="() => RemoveKelengkapan(idx)">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                    <datalist id="kelengkapan-datalist">
-                        @foreach (var k in (_kelengkapans ?? []).Where(k => k.IsActive))
-                        {
-                            <option value="@k.Name">@k.Name</option>
-                        }
-                    </datalist>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudNumericField T="decimal" @bind-Value="_dp"
+                                         Label="DP (Uang Muka)"
+                                         Adornment="Adornment.Start" AdornmentText="Rp"
+                                         Format="N0" Culture="@IdCulture" HideSpinButtons="true" Min="0"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudNumericField T="decimal" @bind-Value="_angsuran"
+                                         Label="Angsuran / Bulan"
+                                         Adornment="Adornment.Start" AdornmentText="Rp"
+                                         Format="N0" Culture="@IdCulture" HideSpinButtons="true" Min="0"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSelect T="Guid?" @bind-Value="_daftarHargaLeasingId"
+                                   Label="Daftar Harga Leasing" Placeholder="— Pilih Daftar Harga Leasing —"
+                                   Clearable="true"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" Dense="true">
+                            @foreach (var d in (_daftarHargaLeasings ?? []).Where(d => d.IsActive))
+                            {
+                                <MudSelectItem T="Guid?" Value="@((Guid?)d.Id)">@d.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudTextField T="string" @bind-Value="_tenorCode"
+                                      Label="Tenor Code" Placeholder="cth. T24" HelperText="Opsional"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                    </MudItem>
                 }
-            </div>
+            </MudGrid>
 
-            <div class="mt-4">
-                <button type="button" class="btn btn-primary" @onclick="HandleCreate" disabled="@_saving">
+            <MudDivider Class="my-5" />
+
+            @* ── Data konsumen ── *@
+            <MudText Typo="Typo.overline" Style="color:var(--mud-palette-text-secondary)">
+                Data Konsumen
+            </MudText>
+            <MudGrid Spacing="3" Class="mt-0">
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField T="string" @bind-Value="_namaCustomer"
+                                  Label="Nama Konsumen" Placeholder="Nama lengkap" Required="true"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField T="string" @bind-Value="_phone"
+                                  Label="Telepon" Placeholder="No. telepon utama" Required="true"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField T="string" @bind-Value="_phone1"
+                                  Label="Telepon 1" Placeholder="No. telepon alternatif" HelperText="Opsional"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField T="string" @bind-Value="_phone2"
+                                  Label="Telepon 2" Placeholder="No. telepon alternatif 2" HelperText="Opsional"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" md="8">
+                    <MudTextField T="string" @bind-Value="_address"
+                                  Label="Alamat" Placeholder="Alamat lengkap" Required="true" Lines="2"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="my-5" />
+
+            @* ── Kelengkapan ── *@
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="1">
+                    <MudText Typo="Typo.overline" Style="color:var(--mud-palette-text-secondary)">Kelengkapan</MudText>
+                    <MudText Typo="Typo.caption" Style="color:var(--mud-palette-text-secondary)">(opsional)</MudText>
+                </MudStack>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Add" OnClick="AddKelengkapan">
+                    Tambah
+                </MudButton>
+            </MudStack>
+            @if (_kelengkapan.Count > 0)
+            {
+                <MudGrid Spacing="2">
+                    @foreach (var (item, idx) in _kelengkapan.Select((v, i) => (v, i)))
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudAutocomplete T="string"
+                                                 Value="@item"
+                                                 ValueChanged="@(v => _kelengkapan[idx] = v ?? string.Empty)"
+                                                 SearchFunc="SearchKelengkapan"
+                                                 CoerceValue="true" Clearable="true"
+                                                 Placeholder="Nama kelengkapan"
+                                                 Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                               Color="Color.Error"
+                                               OnClick="@(() => RemoveKelengkapan(idx))" />
+                            </MudStack>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+
+        </MudCardContent>
+
+        <MudCardActions Class="px-4 pb-4 pt-0">
+            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="flex-grow-1">
+                <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ToggleCreate">
+                    Batal
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false"
+                           StartIcon="@(_saving ? null : Icons.Material.Filled.Check)"
+                           OnClick="HandleCreate" Disabled="_saving">
                     @if (_saving)
                     {
-                        <span class="spinner-border spinner-border-sm me-1"></span>
+                        <MudProgressCircular Indeterminate="true" Color="Color.Inherit"
+                                             Style="width:18px;height:18px" Class="mr-2" />
                     }
-                    else
-                    {
-                        <i class="bi bi-check-lg me-1"></i>
-                    }
-                    Simpan Penjualan
-                </button>
-                <button type="button" class="btn btn-outline-secondary ms-2" @onclick="ToggleCreate">Batal</button>
-            </div>
-        </div>
-    </div>
+                    @(_saving ? "Menyimpan…" : "Simpan Penjualan")
+                </MudButton>
+            </MudStack>
+        </MudCardActions>
+
+    </MudCard>
 }
 
 @* ── Approve inline form ── *@
 @if (_approvingId.HasValue)
 {
-    <div class="card mb-4 border-warning">
-        <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-check-circle me-1"></i> Approve Penjualan</span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _approvingId = null">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-        <div class="card-body">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">Diskon yang Disetujui <span class="text-danger">*</span></label>
-                    <InputNumber class="form-control" @bind-Value="_approvedDiscount" />
-                </div>
-                <div class="col-md-3">
-                    <button type="button" class="btn btn-warning" @onclick="HandleApprove" disabled="@_saving">
-                        @if (_saving)
-                        {
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                        }
-                        Simpan Approve
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary ms-2" @onclick="() => _approvingId = null">Batal</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <MudCard Outlined="true" Elevation="0" Class="mb-4"
+             Style="max-width:1100px;border-left:3px solid var(--mud-palette-warning)">
+        <MudCardHeader Class="pb-0">
+            <CardHeaderContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Color="Color.Warning" />
+                    <MudText Typo="Typo.h6">Approve Penjualan</MudText>
+                </MudStack>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                               OnClick="@(() => _approvingId = null)" />
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="5" md="4">
+                    <MudNumericField T="decimal" @bind-Value="_approvedDiscount"
+                                     Label="Diskon yang Disetujui" Required="true"
+                                     Adornment="Adornment.Start" AdornmentText="Rp"
+                                     Format="N0" Culture="@IdCulture" HideSpinButtons="true" Min="0"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" />
+                </MudItem>
+                <MudItem xs="12" sm="7" md="8">
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton Variant="Variant.Filled" Color="Color.Warning" DropShadow="false"
+                                   OnClick="HandleApprove" Disabled="_saving">
+                            @(_saving ? "Menyimpan…" : "Simpan Approve")
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Default"
+                                   OnClick="@(() => _approvingId = null)">
+                            Batal
+                        </MudButton>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
 }
 
 @* ── Detail view ── *@
 @if (_viewingDetail is not null)
 {
-    <div class="card mb-4 border-info">
-        <div class="card-header fw-semibold text-info-emphasis bg-info-subtle d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-eye me-1"></i> Detail — @_viewingDetail.NoPenjualan</span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _viewingDetail = null">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-        <div class="card-body">
-            <div class="row mb-3 small">
-                <div class="col-md-2">
-                    <div class="text-muted">No. Penjualan</div>
-                    <div class="fw-semibold">@_viewingDetail.NoPenjualan</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">Tanggal</div>
-                    <div>@_viewingDetail.SaleDate.ToString("dd/MM/yyyy")</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">Metode</div>
-                    <div>@_viewingDetail.MetodePenjualan</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">Tipe</div>
-                    <div>@_viewingDetail.TipePenjualan</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">No. Mesin</div>
-                    <div class="font-monospace">@_viewingDetail.NoMesin</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">No. Rangka</div>
-                    <div class="font-monospace">@_viewingDetail.NoRangka</div>
-                </div>
-            </div>
-            <div class="row mb-3 small">
-                <div class="col-md-3">
-                    <div class="text-muted">Nama Konsumen</div>
-                    <div class="fw-semibold">@_viewingDetail.NamaCustomer</div>
-                </div>
-                <div class="col-md-3">
-                    <div class="text-muted">Alamat</div>
-                    <div>@_viewingDetail.Address</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">Telepon</div>
-                    <div>@_viewingDetail.Phone</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">Tipe Motor</div>
-                    <div>@_viewingDetail.TipeMotorCode</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">Warna</div>
-                    <div>@_viewingDetail.WarnaName</div>
-                </div>
-            </div>
-            <div class="row mb-3 small">
-                <div class="col-md-2">
-                    <div class="text-muted">Total</div>
-                    <div class="fw-semibold">@_viewingDetail.Total.ToString("N0")</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">Off Road</div>
-                    <div>@_viewingDetail.OffRoad.ToString("N0")</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">BBN</div>
-                    <div>@_viewingDetail.Bbn.ToString("N0")</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">Diskon</div>
-                    <div>@_viewingDetail.Discount.ToString("N0")</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">Diskon Disetujui</div>
-                    <div>@_viewingDetail.ApprovedDiscount.ToString("N0")</div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-muted">TAC</div>
-                    <div>@_viewingDetail.Tac.ToString("N0")</div>
-                </div>
-            </div>
-            @if (_viewingDetail.MetodePenjualan == "CREDIT")
-            {
-                <div class="row mb-3 small">
-                    <div class="col-md-2">
-                        <div class="text-muted">DP</div>
-                        <div>@_viewingDetail.Dp.ToString("N0")</div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="text-muted">Angsuran</div>
-                        <div>@_viewingDetail.Angsuran.ToString("N0")</div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="text-muted">Tenor</div>
-                        <div>@(_viewingDetail.TenorCode ?? "—")</div>
-                    </div>
-                </div>
-            }
-            @if (_viewingDetail.Kelengkapan is { Count: > 0 })
-            {
-                <div class="mb-2 small">
-                    <div class="text-muted mb-1">Kelengkapan</div>
-                    <div class="d-flex flex-wrap gap-1">
-                        @foreach (var k in _viewingDetail.Kelengkapan)
-                        {
-                            <span class="badge bg-secondary">@k</span>
-                        }
-                    </div>
-                </div>
-            }
-            <div class="row small">
-                <div class="col-md-3">
-                    <div class="text-muted">No. STK</div>
-                    <div>@_viewingDetail.SerahTerimaKendaraanId</div>
-                </div>
+    <MudCard Outlined="true" Elevation="0" Class="mb-4"
+             Style="border-left:3px solid var(--mud-palette-info)">
+        <MudCardHeader Class="pb-0">
+            <CardHeaderContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Outlined.Visibility" Color="Color.Info" />
+                    <MudText Typo="Typo.h6">Detail — @_viewingDetail.NoPenjualan</MudText>
+                </MudStack>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                               OnClick="@(() => _viewingDetail = null)" />
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudGrid Spacing="3">
+                @DetailItem("No. Penjualan", _viewingDetail.NoPenjualan, strong: true)
+                @DetailItem("Tanggal", _viewingDetail.SaleDate.ToString("dd/MM/yyyy"))
+                @DetailItem("Metode", _viewingDetail.MetodePenjualan)
+                @DetailItem("Tipe", _viewingDetail.TipePenjualan)
+                @DetailItem("No. Mesin", _viewingDetail.NoMesin, mono: true)
+                @DetailItem("No. Rangka", _viewingDetail.NoRangka, mono: true)
+                @DetailItem("Nama Konsumen", _viewingDetail.NamaCustomer, strong: true)
+                @DetailItem("Alamat", _viewingDetail.Address, wide: true)
+                @DetailItem("Telepon", _viewingDetail.Phone)
+                @DetailItem("Tipe Motor", _viewingDetail.TipeMotorCode)
+                @DetailItem("Warna", _viewingDetail.WarnaName)
+                @DetailItem("Total", _viewingDetail.Total.ToString("N0"), strong: true)
+                @DetailItem("Off Road", _viewingDetail.OffRoad.ToString("N0"))
+                @DetailItem("BBN", _viewingDetail.Bbn.ToString("N0"))
+                @DetailItem("Diskon", _viewingDetail.Discount.ToString("N0"))
+                @DetailItem("Diskon Disetujui", _viewingDetail.ApprovedDiscount.ToString("N0"))
+                @DetailItem("TAC", _viewingDetail.Tac.ToString("N0"))
+                @if (_viewingDetail.MetodePenjualan == "CREDIT")
+                {
+                    @DetailItem("DP", _viewingDetail.Dp.ToString("N0"))
+                    @DetailItem("Angsuran", _viewingDetail.Angsuran.ToString("N0"))
+                    @DetailItem("Tenor", _viewingDetail.TenorCode)
+                }
+                @if (_viewingDetail.Kelengkapan is { Count: > 0 })
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Style="color:var(--mud-palette-text-secondary)"
+                                 Class="mb-1 d-block">Kelengkapan</MudText>
+                        <div class="d-flex flex-wrap gap-1">
+                            @foreach (var k in _viewingDetail.Kelengkapan)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">@k</MudChip>
+                            }
+                        </div>
+                    </MudItem>
+                }
+                @DetailItem("No. STK", _viewingDetail.SerahTerimaKendaraanId)
                 @if (_viewingDetail.TandaTerimaSementaraId is not null)
                 {
-                    <div class="col-md-3">
-                        <div class="text-muted">No. TTS</div>
-                        <div>@_viewingDetail.TandaTerimaSementaraId</div>
-                    </div>
+                    @DetailItem("No. TTS", _viewingDetail.TandaTerimaSementaraId)
                 }
-            </div>
-        </div>
-    </div>
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
 }
 
 @* ── List table ── *@
-<div class="card">
-    <div class="card-header fw-semibold">Semua Registrasi Penjualan</div>
-    <div class="card-body p-0">
-        @if (_list is null)
-        {
-            <div class="p-3 text-muted">
-                <span class="spinner-border spinner-border-sm me-1"></span> Memuat…
-            </div>
-        }
-        else if (_list.Count == 0)
-        {
-            <div class="p-3 text-muted">Belum ada registrasi penjualan yang terdaftar.</div>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>No. Penjualan</th>
-                            <th>Tgl</th>
-                            <th>Sales</th>
-                            <th>Kios</th>
-                            <th>Metode</th>
-                            <th>No. Mesin</th>
-                            <th>Nama Konsumen</th>
-                            <th class="text-end">Total</th>
-                            <th>Status</th>
-                            <th class="text-end">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var reg in _list)
-                        {
-                            <tr class="@(_viewingDetail?.Id == reg.Id ? "table-info" : "")">
-                                <td class="fw-semibold">@reg.NoPenjualan</td>
-                                <td>@reg.SaleDate.ToString("dd/MM/yyyy")</td>
-                                <td class="small">@KaryawanName(reg.KaryawanId)</td>
-                                <td class="small">@KiosCode(reg.KiosId)</td>
-                                <td><span class="badge @(reg.MetodePenjualan == "CREDIT" ? "bg-info text-dark" : "bg-primary")">@reg.MetodePenjualan</span></td>
-                                <td class="font-monospace small">@reg.NoMesin</td>
-                                <td>@reg.NamaCustomer</td>
-                                <td class="text-end">@reg.Total.ToString("N0")</td>
-                                <td>@StatusBadge(reg.Status)</td>
-                                <td class="text-end">
-                                    <div class="d-flex gap-1 justify-content-end flex-wrap">
-                                        <button class="btn btn-sm btn-outline-info" title="Detail"
-                                                @onclick="() => ViewDetail(reg)">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                        <AuthorizeView Roles="Admin">
-                                            @if (reg.Status == "PENDING")
-                                            {
-                                                <button class="btn btn-sm btn-outline-success" title="Approve"
-                                                        @onclick="() => StartApprove(reg)">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </button>
-                                            }
-                                            @if (reg.EnableToVoid)
-                                            {
-                                                <button class="btn btn-sm btn-outline-secondary" title="Larang Void"
-                                                        @onclick="() => HandleSetEnableToVoid(reg, false)">
-                                                    <i class="bi bi-shield-x"></i>
-                                                </button>
-                                            }
-                                            else
-                                            {
-                                                <button class="btn btn-sm btn-outline-secondary" title="Izinkan Void"
-                                                        @onclick="() => HandleSetEnableToVoid(reg, true)">
-                                                    <i class="bi bi-shield-check"></i>
-                                                </button>
-                                            }
-                                            @if (reg.Status != "VOID" && reg.EnableToVoid)
-                                            {
-                                                <button class="btn btn-sm btn-outline-danger" title="Void"
-                                                        @onclick="() => HandleVoid(reg)">
-                                                    <i class="bi bi-slash-circle"></i>
-                                                </button>
-                                            }
-                                        </AuthorizeView>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-    </div>
-</div>
+<MudTable T="RegistrasiPenjualanDto" Items="@(_list ?? [])"
+          Hover="true" Dense="true" Outlined="true" Elevation="0"
+          Breakpoint="Breakpoint.Sm"
+          Loading="@(_list is null)" LoadingProgressColor="Color.Primary"
+          RowClassFunc="@((reg, _) => _viewingDetail?.Id == reg.Id ? "row-active" : string.Empty)">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Semua Registrasi Penjualan</MudText>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>No. Penjualan</MudTh>
+        <MudTh>Tgl</MudTh>
+        <MudTh>Sales</MudTh>
+        <MudTh>Kios</MudTh>
+        <MudTh>Metode</MudTh>
+        <MudTh>No. Mesin</MudTh>
+        <MudTh>Nama Konsumen</MudTh>
+        <MudTh Style="text-align:right">Total</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh Style="text-align:right">Aksi</MudTh>
+    </HeaderContent>
+    <RowTemplate Context="reg">
+        <MudTd DataLabel="No. Penjualan" Style="font-weight:600">@reg.NoPenjualan</MudTd>
+        <MudTd DataLabel="Tgl">@reg.SaleDate.ToString("dd/MM/yyyy")</MudTd>
+        <MudTd DataLabel="Sales">@KaryawanName(reg.KaryawanId)</MudTd>
+        <MudTd DataLabel="Kios">@KiosCode(reg.KiosId)</MudTd>
+        <MudTd DataLabel="Metode">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                     Color="@(reg.MetodePenjualan == "CREDIT" ? Color.Info : Color.Primary)">
+                @reg.MetodePenjualan
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="No. Mesin" Class="mono">@reg.NoMesin</MudTd>
+        <MudTd DataLabel="Nama Konsumen">@reg.NamaCustomer</MudTd>
+        <MudTd DataLabel="Total" Style="text-align:right">@reg.Total.ToString("N0")</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@StatusColor(reg.Status)">
+                @reg.Status
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Aksi" Style="text-align:right">
+            <MudStack Row="true" Spacing="0" Justify="Justify.FlexEnd">
+                <MudTooltip Text="Detail">
+                    <MudIconButton Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small"
+                                   Color="Color.Info" OnClick="@(() => ViewDetail(reg))" />
+                </MudTooltip>
+                <AuthorizeView Roles="Admin" Context="auth">
+                    @if (reg.Status == "PENDING")
+                    {
+                        <MudTooltip Text="Approve">
+                            <MudIconButton Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small"
+                                           Color="Color.Success" OnClick="@(() => StartApprove(reg))" />
+                        </MudTooltip>
+                    }
+                    @if (reg.EnableToVoid)
+                    {
+                        <MudTooltip Text="Larang Void">
+                            <MudIconButton Icon="@Icons.Material.Outlined.GppBad" Size="Size.Small"
+                                           Color="Color.Default" OnClick="@(() => HandleSetEnableToVoid(reg, false))" />
+                        </MudTooltip>
+                    }
+                    else
+                    {
+                        <MudTooltip Text="Izinkan Void">
+                            <MudIconButton Icon="@Icons.Material.Outlined.GppGood" Size="Size.Small"
+                                           Color="Color.Default" OnClick="@(() => HandleSetEnableToVoid(reg, true))" />
+                        </MudTooltip>
+                    }
+                    @if (reg.Status != "VOID" && reg.EnableToVoid)
+                    {
+                        <MudTooltip Text="Void">
+                            <MudIconButton Icon="@Icons.Material.Outlined.Block" Size="Size.Small"
+                                           Color="Color.Error" OnClick="@(() => HandleVoid(reg))" />
+                        </MudTooltip>
+                    }
+                </AuthorizeView>
+            </MudStack>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body2" Style="color:var(--mud-palette-text-secondary)">
+            @(_list is null ? "Memuat…" : "Belum ada registrasi penjualan yang terdaftar.")
+        </MudText>
+    </NoRecordsContent>
+</MudTable>
 
 @code {
+    private static readonly CultureInfo IdCulture = CultureInfo.GetCultureInfo("id-ID");
+
     private List<RegistrasiPenjualanDto>? _list;
     private List<KaryawanDto>?            _karyawans;
     private List<KiosDto>?                _kiosList;
@@ -563,6 +568,13 @@
     private Guid?   _approvingId;
     private decimal _approvedDiscount;
 
+    // MudDatePicker binds DateTime? — bridge to the DateOnly field.
+    private DateTime? SaleDateProxy
+    {
+        get => _saleDate.ToDateTime(TimeOnly.MinValue);
+        set { if (value.HasValue) _saleDate = DateOnly.FromDateTime(value.Value); }
+    }
+
     // ── Lifecycle ──────────────────────────────────────────────────────────────
 
     protected override async Task OnInitializedAsync()
@@ -593,8 +605,11 @@
         if (!_showCreate) ResetForm();
     }
 
-    private void OnMetodeChanged(string metode)
+    private void OnMetodeChanged(string? metode)
     {
+        // Re-clicking the selected pill deselects it in MudToggleGroup — ignore that.
+        if (string.IsNullOrEmpty(metode)) return;
+
         _metodePenjualan = metode;
         if (metode == "CASH")
         {
@@ -621,6 +636,14 @@
 
     private void AddKelengkapan()    => _kelengkapan.Add("");
     private void RemoveKelengkapan(int idx) => _kelengkapan.RemoveAt(idx);
+
+    private Task<IEnumerable<string>> SearchKelengkapan(string value, CancellationToken _)
+    {
+        var options = (_kelengkapans ?? []).Where(k => k.IsActive).Select(k => k.Name);
+        if (!string.IsNullOrWhiteSpace(value))
+            options = options.Where(o => o.Contains(value, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(options);
+    }
 
     private async Task HandleCreate()
     {
@@ -748,12 +771,21 @@
     private string KiosCode(Guid id)
         => _kiosList?.FirstOrDefault(k => k.Id == id)?.Code ?? "—";
 
-    private RenderFragment StatusBadge(string status) => status switch
+    private static Color StatusColor(string status) => status switch
     {
-        "PENDING"  => @<span class="badge bg-warning text-dark">PENDING</span>,
-        "APPROVED" => @<span class="badge bg-success">APPROVED</span>,
-        "SENT"     => @<span class="badge bg-info text-dark">SENT</span>,
-        "VOID"     => @<span class="badge bg-secondary">VOID</span>,
-        _          => @<span class="badge bg-secondary">@status</span>,
+        "PENDING"  => Color.Warning,
+        "APPROVED" => Color.Success,
+        "SENT"     => Color.Info,
+        _          => Color.Default,
     };
+
+    private RenderFragment DetailItem(string label, string? value, bool mono = false, bool strong = false, bool wide = false) =>
+        @<MudItem xs="@(wide ? 12 : 6)" sm="@(wide ? 8 : 4)" md="@(wide ? 4 : 2)">
+            <MudText Typo="Typo.caption" Style="color:var(--mud-palette-text-secondary)">@label</MudText>
+            <MudText Typo="Typo.body2"
+                     Class="@(mono ? "mono" : null)"
+                     Style="@(strong ? "font-weight:600" : null)">
+                @(string.IsNullOrEmpty(value) ? "—" : value)
+            </MudText>
+        </MudItem>;
 }

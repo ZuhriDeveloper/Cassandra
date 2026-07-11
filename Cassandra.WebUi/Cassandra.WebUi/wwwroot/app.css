@@ -22,3 +22,68 @@ html, body {
         right: 0.75rem;
         top: 0.5rem;
     }
+
+/* ══ Cassandra UI polish — uses MudBlazor CSS vars, light/dark safe ══ */
+
+/* Cards: flat, hairline border (shadow comes from theme elevations) */
+.mud-card {
+    border: 1px solid var(--mud-palette-lines-default);
+}
+
+/* Outlined inputs: calm borders, smooth brand-tinted focus ring */
+.mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--mud-palette-lines-inputs);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.mud-input-outlined:hover .mud-input-outlined-border {
+    border-color: var(--mud-palette-text-secondary);
+}
+
+.mud-input-outlined:focus-within .mud-input-outlined-border {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+}
+
+/* Table headers: quiet uppercase micro-labels
+   (three-class selector needed to out-specify MudBlazor's own rule) */
+.mud-table-root .mud-table-head .mud-table-cell {
+    font-size: .72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--mud-palette-text-secondary);
+    background: var(--mud-palette-background);
+}
+
+/* Row highlighted while its detail panel is open */
+.row-active {
+    background: var(--mud-palette-table-hover);
+}
+
+/* Segmented control (pill) — pairs with MudToggleGroup Class="segmented" */
+.segmented {
+    border-radius: 9999px !important;
+    padding: 3px;
+    background: var(--mud-palette-background);
+    border: 1px solid var(--mud-palette-lines-inputs);
+}
+
+    .segmented .mud-toggle-item {
+        border-radius: 9999px !important;
+        border: none !important;
+        min-width: 96px;
+    }
+
+.segmented-selected {
+    background: var(--mud-palette-surface) !important;
+    color: var(--mud-palette-primary) !important;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .15);
+}
+
+/* Monospace helper for engine/chassis numbers etc. */
+.mono,
+.mono input,
+.mono textarea {
+    font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+}
