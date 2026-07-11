@@ -1,0 +1,184 @@
+/* ==========================================================================
+   Auth screens (Login / Forgot password / Reset password)
+   --------------------------------------------------------------------------
+   A small, self-contained visual system for the signed-out flow. Every rule
+   is scoped under `.auth-shell` so nothing leaks into the MudBlazor app.
+   Tokens mirror CassandraTheme.cs (PaletteLight / PaletteDark). Dark mode is
+   driven by the `data-prefers-dark` attribute the App.razor FOUC guard sets
+   on <html> from localStorage['cassandra_dark'] — no JS needed here.
+   ========================================================================== */
+
+.auth-shell {
+    --auth-brand:        #D62828;
+    --auth-brand-strong: #A41E1E;
+    --auth-brand-soft:   rgba(214, 40, 40, .12);
+    --auth-bg:           #F1F5F9;
+    --auth-surface:      #FFFFFF;
+    --auth-border:       #E2E8F0;
+    --auth-text:         #1E293B;
+    --auth-text-muted:   #64748B;
+    --auth-input-bg:     #FFFFFF;
+
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background:
+        radial-gradient(1100px 480px at 50% -12%, var(--auth-brand-soft), transparent 60%),
+        var(--auth-bg);
+}
+
+html[data-prefers-dark="true"] .auth-shell {
+    --auth-brand:        #E85D5D;
+    --auth-brand-strong: #D62828;
+    --auth-brand-soft:   rgba(232, 93, 93, .14);
+    --auth-bg:           #0F172A;
+    --auth-surface:      #1E293B;
+    --auth-border:       #334155;
+    --auth-text:         #E2E8F0;
+    --auth-text-muted:   #94A3B8;
+    --auth-input-bg:     #0F172A;
+}
+
+/* ── Card ──────────────────────────────────────────────────────────────── */
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--auth-surface);
+    border: 1px solid var(--auth-border);
+    border-radius: 16px;
+    padding: 1.9rem 1.75rem;
+    box-shadow:
+        0 12px 32px -14px rgba(15, 23, 42, .35),
+        0 2px 6px -2px rgba(15, 23, 42, .12);
+    animation: auth-rise .35s ease both;
+}
+
+@keyframes auth-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-card { animation: none; }
+}
+
+/* ── Brand lockup ──────────────────────────────────────────────────────── */
+.auth-brandmark {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 13px;
+    background: var(--auth-brand);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: 0 6px 14px -6px var(--auth-brand);
+}
+
+.auth-brand-name {
+    font-size: 1.15rem;
+    line-height: 1.1;
+    color: var(--auth-text);
+}
+
+.auth-brand-tag {
+    font-size: .78rem;
+    color: var(--auth-text-muted);
+}
+
+/* ── Typography ────────────────────────────────────────────────────────── */
+.auth-shell .card-title { color: var(--auth-text); }
+.auth-shell .form-label { color: var(--auth-text); font-weight: 500; }
+.auth-shell .form-text  { color: var(--auth-text-muted); }
+.auth-shell .text-muted { color: var(--auth-text-muted) !important; }
+
+/* ── Inputs ────────────────────────────────────────────────────────────── */
+.auth-shell .form-control {
+    background: var(--auth-input-bg);
+    color: var(--auth-text);
+    border-color: var(--auth-border);
+    padding-top: .55rem;
+    padding-bottom: .55rem;
+}
+
+.auth-shell .form-control::placeholder {
+    color: var(--auth-text-muted);
+    opacity: .7;
+}
+
+.auth-shell .form-control:focus {
+    background: var(--auth-input-bg);
+    color: var(--auth-text);
+    border-color: var(--auth-brand);
+    box-shadow: 0 0 0 .2rem var(--auth-brand-soft);
+}
+
+.auth-shell .input-group-text {
+    background: transparent;
+    color: var(--auth-text-muted);
+    border-color: var(--auth-border);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.auth-shell .btn-primary {
+    background: var(--auth-brand);
+    border-color: var(--auth-brand);
+    padding-top: .5rem;
+    padding-bottom: .5rem;
+    font-weight: 500;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+.auth-shell .btn-primary:hover,
+.auth-shell .btn-primary:focus {
+    background: var(--auth-brand-strong);
+    border-color: var(--auth-brand-strong);
+}
+
+.auth-shell .btn-primary:focus-visible {
+    box-shadow: 0 0 0 .25rem var(--auth-brand-soft);
+}
+
+.auth-shell .btn-primary:disabled {
+    background: var(--auth-brand);
+    border-color: var(--auth-brand);
+    opacity: .65;
+}
+
+.auth-shell .btn-outline-secondary {
+    color: var(--auth-text-muted);
+    border-color: var(--auth-border);
+}
+
+.auth-shell .btn-outline-secondary:hover,
+.auth-shell .btn-outline-secondary:focus {
+    background: var(--auth-brand-soft);
+    color: var(--auth-brand);
+    border-color: var(--auth-border);
+}
+
+/* ── Links ─────────────────────────────────────────────────────────────── */
+.auth-shell a {
+    color: var(--auth-brand);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-shell a:hover {
+    color: var(--auth-brand-strong);
+    text-decoration: underline;
+}
+
+/* ── Footer note ───────────────────────────────────────────────────────── */
+.auth-foot {
+    margin-top: 1.35rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--auth-border);
+    text-align: center;
+    font-size: .78rem;
+    color: var(--auth-text-muted);
+}

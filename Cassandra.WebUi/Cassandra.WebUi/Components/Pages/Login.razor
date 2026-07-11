@@ -6,76 +6,81 @@
 
 <PageTitle>Masuk — ModeOn</PageTitle>
 
-<div class="d-flex align-items-center justify-content-center min-vh-100 bg-light">
-    <div class="card shadow-sm" style="width: 100%; max-width: 420px;">
-        <div class="card-body p-4">
-            <h4 class="card-title mb-1 fw-bold">ModeOn</h4>
-            <p class="text-muted mb-4 small">Dealer Sepeda Motor — masuk untuk melanjutkan</p>
+<AuthCard Title="Masuk untuk melanjutkan"
+          Subtitle="Gunakan email dan kata sandi akun Anda.">
+    <ChildContent>
+        @if (Expired == "1")
+        {
+            <div class="alert alert-warning py-2 small d-flex align-items-center gap-2" role="alert">
+                <i class="bi bi-clock-history flex-shrink-0"></i>
+                <span>Sesi Anda telah berakhir. Silakan masuk kembali.</span>
+            </div>
+        }
 
-            @if (Expired == "1")
-            {
-                <div class="alert alert-warning py-2 small d-flex align-items-center gap-2" role="alert">
-                    <i class="bi bi-clock-history flex-shrink-0"></i>
-                    <span>Sesi Anda telah berakhir. Silakan masuk kembali.</span>
-                </div>
-            }
+        @if (!string.IsNullOrEmpty(Error))
+        {
+            <div class="alert alert-danger py-2 small" role="alert">
+                @Uri.UnescapeDataString(Error)
+            </div>
+        }
 
-            @if (!string.IsNullOrEmpty(Error))
-            {
-                <div class="alert alert-danger py-2 small" role="alert">
-                    @Uri.UnescapeDataString(Error)
-                </div>
-            }
+        @* Plain HTML form — posts to a minimal-API endpoint that calls
+           HttpContext.SignInAsync (requires a real HTTP request, not SignalR). *@
+        <form method="post" action="/account/login-handler">
+            <input type="hidden" name="returnUrl" value="@ReturnUrl" />
 
-            @* Plain HTML form — posts to a minimal-API endpoint that calls
-               HttpContext.SignInAsync (requires a real HTTP request, not SignalR). *@
-            <form method="post" action="/account/login-handler">
-                <input type="hidden" name="returnUrl" value="@ReturnUrl" />
-
-                <div class="mb-3">
-                    <label class="form-label" for="email">Email</label>
+            <div class="mb-3">
+                <label class="form-label" for="email">Email</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                     <input id="email" name="email" type="email"
                            class="form-control"
                            autocomplete="email"
-                           placeholder="masukan email"
+                           placeholder="nama@dealer.com"
                            required />
                 </div>
+            </div>
 
-                <div class="mb-4">
-                    <label class="form-label" for="password">Kata Sandi</label>
-                    <div class="input-group">
-                        <input id="password" name="password" type="password"
-                               class="form-control"
-                               autocomplete="current-password"
-                               placeholder="masukan password"
-                               required />
-                        <button type="button"
-                                class="btn btn-outline-secondary"
-                                title="Tampilkan / sembunyikan kata sandi"
-                                onclick="(function(btn){
-                                    var inp = document.getElementById('password');
-                                    var ico = btn.querySelector('i');
-                                    if (inp.type === 'password') {
-                                        inp.type = 'text';
-                                        ico.className = 'bi bi-eye-slash';
-                                    } else {
-                                        inp.type = 'password';
-                                        ico.className = 'bi bi-eye';
-                                    }
-                                })(this)">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                    </div>
-                    <div class="text-end mt-1">
-                        <a href="/forgot-password" class="small">Lupa kata sandi?</a>
-                    </div>
+            <div class="mb-4">
+                <label class="form-label" for="password">Kata Sandi</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                    <input id="password" name="password" type="password"
+                           class="form-control"
+                           autocomplete="current-password"
+                           placeholder="Masukkan kata sandi"
+                           required />
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            title="Tampilkan / sembunyikan kata sandi"
+                            onclick="(function(btn){
+                                var inp = document.getElementById('password');
+                                var ico = btn.querySelector('i');
+                                if (inp.type === 'password') {
+                                    inp.type = 'text';
+                                    ico.className = 'bi bi-eye-slash';
+                                } else {
+                                    inp.type = 'password';
+                                    ico.className = 'bi bi-eye';
+                                }
+                            })(this)">
+                        <i class="bi bi-eye"></i>
+                    </button>
                 </div>
+                <div class="text-end mt-2">
+                    <a href="/forgot-password" class="small">Lupa kata sandi?</a>
+                </div>
+            </div>
 
-                <button type="submit" class="btn btn-primary w-100">Masuk</button>
-            </form>
-        </div>
-    </div>
-</div>
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Masuk
+            </button>
+        </form>
+    </ChildContent>
+    <Footer>
+        Butuh akun? Hubungi admin dealer Anda.
+    </Footer>
+</AuthCard>
 
 @code {
     [SupplyParameterFromQuery(Name = "error")]

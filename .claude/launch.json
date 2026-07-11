@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "webui",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "Cassandra.WebUi/Cassandra.WebUi/Cassandra.WebUi.csproj",
+        "--launch-profile",
+        "http"
+      ],
+      "port": 5115
+    }
+  ]
+}

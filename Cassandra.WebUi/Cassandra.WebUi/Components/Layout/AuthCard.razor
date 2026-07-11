@@ -1,0 +1,44 @@
+@* Shared shell for the signed-out auth screens (Login / Forgot / Reset).
+   Renders the full-screen centered card + ModeOn brand lockup + page title,
+   then the page-specific body as ChildContent. Styling lives in
+   wwwroot/css/auth.css, scoped under `.auth-shell`. *@
+
+<div class="auth-shell">
+    <div class="auth-card">
+
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <div class="auth-brandmark">
+                <i class="bi bi-scooter"></i>
+            </div>
+            <div>
+                <div class="auth-brand-name fw-bold">ModeOn</div>
+                <div class="auth-brand-tag">Dealer sepeda motor</div>
+            </div>
+        </div>
+
+        <h5 class="card-title fw-bold mb-1">@Title</h5>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <p class="text-muted small mb-4">@Subtitle</p>
+        }
+        else
+        {
+            <div class="mb-4"></div>
+        }
+
+        @ChildContent
+
+        @if (Footer is not null)
+        {
+            <div class="auth-foot">@Footer</div>
+        }
+
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+}
